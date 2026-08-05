@@ -24,3 +24,5 @@ Thumbs.db
 captures/
 .externalNativeBuild/
 .cxx/
+# Signing keystore
+keystore/
