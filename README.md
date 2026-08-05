@@ -4,6 +4,16 @@
 
 - GitHub 仓库：https://github.com/hihukayo/Flutter-Mobile-Application-Sudoku-game.git
 
+## 截图
+
+| 登录 | 注册 |
+| :---: | :---: |
+| ![登录](picture/login.jpg) | ![注册](picture/register.jpg) |
+
+| 游戏 | 排行榜 | 我的 |
+| :---: | :---: | :---: |
+| ![游戏](picture/game_page.jpg) | ![排行榜](picture/rank.jpg) | ![我的](picture/profile.jpg) |
+
 ## 功能特性
 
 - **三种游戏模式**
