@@ -2,7 +2,7 @@
 
 > Android 原生版数独游戏，使用 **Kotlin + Jetpack Compose** 开发，是 Flutter 版数独应用（`Desktop/application/sudoku`）的完整原生重写，界面与逻辑保持一致。
 
-- GitHub 仓库：https://github.com/hihukayo/Android-Mobile-Application-Sudoku-Game
+- GitHub 仓库：https://github.com/hihukayo/Flutter-Mobile-Application-Sudoku-game.git
 
 ## 功能特性
 
