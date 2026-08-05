@@ -79,21 +79,21 @@ dart run bin/server.dart
 ## 截图
 
 <p align="center">
-  <img src="picture/login.jpg" width="300" alt="登录" />
+  <img src="picture/login.jpg" width="400" alt="登录" />
 </p>
 
 <p align="center">
-  <img src="picture/register.jpg" width="300" alt="注册" />
+  <img src="picture/register.jpg" width="400" alt="注册" />
 </p>
 
 <p align="center">
-  <img src="picture/game_page.jpg" width="300" alt="游戏" />
+  <img src="picture/game_page.jpg" width="400" alt="游戏" />
 </p>
 
 <p align="center">
-  <img src="picture/rank.jpg" width="300" alt="排行榜" />
+  <img src="picture/rank.jpg" width="400" alt="排行榜" />
 </p>
 
 <p align="center">
-  <img src="picture/profile.jpg" width="300" alt="我的" />
+  <img src="picture/profile.jpg" width="400" alt="我的" />
 </p>
