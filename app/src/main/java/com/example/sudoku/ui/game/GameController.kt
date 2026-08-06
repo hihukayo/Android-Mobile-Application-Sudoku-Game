@@ -321,7 +321,6 @@ class GameController(val username: String) {
             }
         }
         errorCells = bad
-        errors = bad.size
     }
 
     fun restart() {
