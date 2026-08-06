@@ -1,9 +1,10 @@
-﻿package com.example.sudoku.data
+package com.example.sudoku.data
 
 import android.os.Build
 import com.example.sudoku.model.Cage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -13,6 +14,8 @@ object ApiClient {
     /** 自动区分模拟器（10.0.2.2）与真机（adb reverse 后 localhost） */
     val baseUrl: String
         get() {
+            val custom = Session.getServerAddress()
+            if (custom.isNotBlank()) return "http://$custom/api"
             val fingerprint =
                 "${Build.MODEL} ${Build.PRODUCT} ${Build.FINGERPRINT}".lowercase()
             return if (fingerprint.contains("sdk") ||
@@ -25,25 +28,30 @@ object ApiClient {
             }
         }
 
+    /** 单次请求总超时（毫秒），超过即停止，避免一直转圈 */
+    private const val REQUEST_TIMEOUT_MS = 8000L
+
     private suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject =
-        withContext(Dispatchers.IO) {
-            val conn = URL("$baseUrl$path").openConnection() as HttpURLConnection
-            try {
-                conn.requestMethod = method
-                conn.connectTimeout = 8000
-                conn.readTimeout = 12000
-                conn.setRequestProperty("Content-Type", "application/json")
-                conn.doInput = true
-                if (body != null) {
-                    conn.doOutput = true
-                    conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+        withTimeout(REQUEST_TIMEOUT_MS) {
+            withContext(Dispatchers.IO) {
+                val conn = URL("$baseUrl$path").openConnection() as HttpURLConnection
+                try {
+                    conn.requestMethod = method
+                    conn.connectTimeout = 5000
+                    conn.readTimeout = 8000
+                    conn.setRequestProperty("Content-Type", "application/json")
+                    conn.doInput = true
+                    if (body != null) {
+                        conn.doOutput = true
+                        conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
+                    }
+                    val code = conn.responseCode
+                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                    val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
+                    JSONObject(text)
+                } finally {
+                    conn.disconnect()
                 }
-                val code = conn.responseCode
-                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-                val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
-                JSONObject(text)
-            } finally {
-                conn.disconnect()
             }
         }
 

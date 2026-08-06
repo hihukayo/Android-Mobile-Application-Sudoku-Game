@@ -1,4 +1,4 @@
-﻿package com.example.sudoku.data
+package com.example.sudoku.data
 
 import android.content.Context
 import android.content.SharedPreferences
@@ -37,5 +37,11 @@ object Session {
 
     fun setAvatar(username: String, bytes: ByteArray) {
         prefs.edit().putString("avatar_$username", Base64.encodeToString(bytes, Base64.NO_WRAP)).apply()
+    }
+
+    fun getServerAddress(): String = prefs.getString("server_address", null) ?: ""
+
+    fun setServerAddress(address: String) {
+        prefs.edit().putString("server_address", address.trim()).apply()
     }
 }

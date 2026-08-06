@@ -35,6 +35,10 @@ class GameController(val username: String) {
     /** 会话内只提示一次续玩 */
     var resumeChecked = false
 
+    /** 存档/读档进行中，防止重复请求 */
+    var saving by mutableStateOf(false)
+    var loadingSave by mutableStateOf(false)
+
     var puzzle by mutableStateOf(SudokuPuzzle(3))
         private set
     var boardSize by mutableStateOf(3)
@@ -391,6 +395,9 @@ class GameController(val username: String) {
 
     // ---- 存档 ----
     fun saveGame(silent: Boolean = false) {
+        if (saving) return
+        saving = true
+        if (!silent) showStatus("正在保存...")
         scope.launch {
             try {
                 ApiClient.saveGame(
@@ -408,7 +415,9 @@ class GameController(val username: String) {
                 )
                 if (!silent) showStatus("存档成功")
             } catch (_: Exception) {
-                if (!silent) showStatus("存档失败")
+                if (!silent) showStatus("存档失败，请检查网络连接后重试")
+            } finally {
+                saving = false
             }
         }
     }

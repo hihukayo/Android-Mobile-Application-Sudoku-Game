@@ -265,12 +265,17 @@ fun GameScreen(controller: GameController) {
         BottomBar(
             controller = controller,
             onLoad = {
-                scope.launch {
-                    val res = controller.fetchSave()
-                    if (res != null && res.optBoolean("success")) {
-                        pendingLoad = res
-                    } else {
-                        controller.showStatus("加载失败，请检查网络连接后重试")
+                if (!controller.loadingSave) {
+                    controller.loadingSave = true
+                    controller.showStatus("正在加载...")
+                    scope.launch {
+                        val res = controller.fetchSave()
+                        controller.loadingSave = false
+                        if (res != null && res.optBoolean("success")) {
+                            pendingLoad = res
+                        } else {
+                            controller.showStatus("加载失败，请检查网络连接后重试")
+                        }
                     }
                 }
             },
@@ -445,11 +450,11 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GameIconTextBtn(AppIcons.CloudUpload, "存档", enabled = true, onClick = { controller.saveGame() })
+            GameIconTextBtn(AppIcons.CloudUpload, "存档", enabled = !controller.saving, onClick = { controller.saveGame() })
             Spacer(Modifier.width(24.dp))
             Box(Modifier.width(1.dp).height(24.dp).background(Color(0xFFE0E0E0)))
             Spacer(Modifier.width(24.dp))
-            GameIconTextBtn(AppIcons.CloudDownload, "读档", enabled = true, onClick = onLoad)
+            GameIconTextBtn(AppIcons.CloudDownload, "读档", enabled = !controller.loadingSave, onClick = onLoad)
         }
     }
 }
