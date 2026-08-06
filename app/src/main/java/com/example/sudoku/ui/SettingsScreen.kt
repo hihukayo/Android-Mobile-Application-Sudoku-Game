@@ -267,34 +267,6 @@ private fun SettingCard(
 }
 
 @Composable
-private fun ServerAddressDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
-    var value by remember { mutableStateOf(Session.getServerAddress().orEmpty()) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("服务器地址", fontSize = 18.sp) },
-        text = {
-            Column {
-                Text("留空则使用默认（USB：localhost / 模拟器：10.0.2.2）", fontSize = 13.sp, color = GreyBlue)
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = { value = it },
-                    label = { Text("例如 192.168.1.100:8080") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(value.trim()) }) { Text("保存") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
-        },
-    )
-}
-
-@Composable
 private fun EditValueDialog(
     title: String,
     label: String,

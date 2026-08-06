@@ -72,5 +72,7 @@ object AppIcons {
             strokeLineCap = StrokeCap.Round,
         )
     }.build()
+    val Dns = icon("Dns", "M20,2L4,2c-1.1,0 -2,0.9 -2,2v16c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2L22,4c0,-1.1 -0.9,-2 -2,-2zM18,14h-4v-2h4v2zM18,10h-4L14,8h4v2zM6,6h12v4L6,10L6,6zM6,14h4v2L6,16v-2zM6,18h4v2L6,20v-2zM10,18h4v2h-4v-2zM18,18h-4v-2h4v2z")
+
     val Check = icon("Check", "M9,16.17L4.83,12l-1.42,1.41L9,19 21,7l-1.41,-1.41z")
 }

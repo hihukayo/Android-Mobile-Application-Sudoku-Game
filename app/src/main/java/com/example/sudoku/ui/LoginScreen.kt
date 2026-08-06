@@ -1,6 +1,5 @@
 package com.example.sudoku.ui
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -64,6 +63,7 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
     var password by remember { mutableStateOf("") }
     var obscure by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
+    var showServerAddress by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
@@ -73,10 +73,10 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding(),
-            contentAlignment = Alignment.Center,
         ) {
             Column(
                 Modifier
+                    .align(Alignment.Center)
                     .widthIn(max = 400.dp)
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
@@ -117,7 +117,7 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                     onClick = {
                         scope.launch {
                             if (account.isBlank() || password.isBlank()) {
-                                snackbar.showSnackbar("请输入账号（用户名/手机号）和密码")
+                                snackbar.showSnackbar("请输入账号和密码")
                                 return@launch
                             }
                             loading = true
@@ -132,7 +132,7 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                                     snackbar.showSnackbar(res.optString("message", "登录失败"))
                                 }
                             } catch (_: Exception) {
-                                snackbar.showSnackbar("连接失败，请确保后端已启动")
+                                snackbar.showSnackbar("连接失败，请稍后重试")
                             } finally {
                                 loading = false
                             }
@@ -152,6 +152,27 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                 Spacer(Modifier.height(16.dp))
                 TextButton(onClick = onGoRegister) { Text("没有账号？去注册") }
             }
+            IconButton(
+                onClick = { showServerAddress = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 12.dp),
+            ) {
+                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = GreyBlue)
+            }
         }
+    }
+
+    if (showServerAddress) {
+        ServerAddressDialog(
+            onDismiss = { showServerAddress = false },
+            onConfirm = { addr ->
+                Session.setServerAddress(addr)
+                showServerAddress = false
+                scope.launch {
+                    snackbar.showSnackbar(if (addr.isEmpty()) "已恢复默认连接" else "服务器地址已保存")
+                }
+            },
+        )
     }
 }

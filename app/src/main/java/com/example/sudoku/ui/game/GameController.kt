@@ -99,7 +99,6 @@ class GameController(val username: String) {
     // ---- 计时 ----
     private fun startTimer() {
         timerJob?.cancel()
-        seconds = 0
         paused = false
         timerJob = scope.launch {
             while (true) {
@@ -188,6 +187,7 @@ class GameController(val username: String) {
         errors = 0
         dirty = false
         paused = false
+        seconds = 0
         statusMsg = ""
         lastScore = 0
         undoStack.clear()
@@ -354,6 +354,7 @@ class GameController(val username: String) {
         isSolved = false
         hasGivenUp = false
         errorCells = emptySet()
+        seconds = 0
         revision++
         startTimer()
     }

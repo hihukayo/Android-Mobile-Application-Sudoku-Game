@@ -52,6 +52,7 @@ fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
     var obscurePwd by remember { mutableStateOf(true) }
     var obscureConfirm by remember { mutableStateOf(true) }
     var loading by remember { mutableStateOf(false) }
+    var showServerAddress by remember { mutableStateOf(false) }
 
     Scaffold(snackbarHost = { SnackbarHost(snackbar) }) { padding ->
         Box(
@@ -59,10 +60,10 @@ fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding(),
-            contentAlignment = Alignment.Center,
         ) {
             Column(
                 Modifier
+                    .align(Alignment.Center)
                     .widthIn(max = 400.dp)
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
@@ -156,7 +157,7 @@ fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
                                     snackbar.showSnackbar(res.optString("message", "注册失败"))
                                 }
                             } catch (_: Exception) {
-                                snackbar.showSnackbar("连接失败，请确保后端已启动")
+                                snackbar.showSnackbar("连接失败，请稍后重试")
                             } finally {
                                 loading = false
                             }
@@ -176,6 +177,27 @@ fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
                 Spacer(Modifier.height(16.dp))
                 TextButton(onClick = onBack) { Text("已有账号？去登录") }
             }
+            IconButton(
+                onClick = { showServerAddress = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 8.dp, end = 12.dp),
+            ) {
+                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = GreyBlue)
+            }
         }
+    }
+
+    if (showServerAddress) {
+        ServerAddressDialog(
+            onDismiss = { showServerAddress = false },
+            onConfirm = { addr ->
+                Session.setServerAddress(addr)
+                showServerAddress = false
+                scope.launch {
+                    snackbar.showSnackbar(if (addr.isEmpty()) "已恢复默认连接" else "服务器地址已保存")
+                }
+            },
+        )
     }
 }
