@@ -26,3 +26,6 @@ captures/
 .cxx/
 # Signing keystore
 keystore/
+
+# Gradle generated
+gradle/gradle-daemon-jvm.properties

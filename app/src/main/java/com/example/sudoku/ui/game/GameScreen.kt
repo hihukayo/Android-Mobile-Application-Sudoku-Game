@@ -269,6 +269,8 @@ fun GameScreen(controller: GameController) {
                     val res = controller.fetchSave()
                     if (res != null && res.optBoolean("success")) {
                         pendingLoad = res
+                    } else {
+                        controller.showStatus("加载失败，请检查网络连接后重试")
                     }
                 }
             },
@@ -329,6 +331,7 @@ fun GameScreen(controller: GameController) {
             onCancel = { pendingLoad = null },
         )
     }
+
 }
 
 private fun digitOf(key: Key): Int? = when (key) {
@@ -432,7 +435,7 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
             GameIconTextBtn(AppIcons.Undo, "撤销", enabled = !disabled && controller.canUndo(), onClick = { controller.undo() })
             GameIconTextBtn(AppIcons.Replay, "重置", enabled = true, onClick = { controller.restart() })
-            GameIconTextBtn(AppIcons.Redo, "重做", enabled = !disabled && controller.canRedo(), onClick = { controller.redo() })
+            GameIconTextBtn(AppIcons.Redo, "重做", enabled = !disabled && controller.canRedo(), onClick = { controller.redo() }, iconAtEnd = true)
         }
         Spacer(Modifier.height(4.dp))
         HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 40.dp))
@@ -477,7 +480,13 @@ private fun GameTextBtn(label: String, onClick: () -> Unit, fill: Boolean = fals
 }
 
 @Composable
-private fun GameIconTextBtn(icon: ImageVector, label: String, onClick: () -> Unit, enabled: Boolean = true) {
+private fun GameIconTextBtn(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    iconAtEnd: Boolean = false,
+) {
     val color = if (enabled) DarkSlate else Color(0xFFC0C0C0)
     Box(
         Modifier
@@ -488,9 +497,15 @@ private fun GameIconTextBtn(icon: ImageVector, label: String, onClick: () -> Uni
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text(label, fontSize = 13.sp, color = color)
+            if (iconAtEnd) {
+                Text(label, fontSize = 13.sp, color = color)
+                Spacer(Modifier.width(4.dp))
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+            } else {
+                Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(label, fontSize = 13.sp, color = color)
+            }
         }
     }
 }
