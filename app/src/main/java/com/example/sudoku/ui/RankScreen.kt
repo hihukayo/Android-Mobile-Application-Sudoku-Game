@@ -107,8 +107,8 @@ fun RankScreen(username: String, refreshTick: Int) {
         HorizontalDivider(thickness = 1.dp)
 
         when {
-            loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            error.isNotEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            error.isNotEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(AppIcons.CloudOff, contentDescription = null, tint = Color(0xFF90A4AE), modifier = Modifier.size(56.dp))
                     Spacer(Modifier.height(12.dp))
@@ -121,7 +121,7 @@ fun RankScreen(username: String, refreshTick: Int) {
                     }
                 }
             }
-            items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            items.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(AppIcons.EmojiEvents, contentDescription = null, tint = Color(0xFFE0E0E0), modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(12.dp))
@@ -130,7 +130,7 @@ fun RankScreen(username: String, refreshTick: Int) {
                     Text("完成一局游戏后数据将自动记录", fontSize = 13.sp, color = Color(0xFFBDBDBD))
                 }
             }
-            else -> LazyColumn(Modifier.fillMaxSize()) {
+            else -> LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
                 itemsIndexed(items) { index, item ->
                     RankItemRow(rank = index + 1, item = item, isMe = item.username == username)
                 }

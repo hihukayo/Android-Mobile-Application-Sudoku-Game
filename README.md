@@ -15,8 +15,8 @@
   - 4×4：简单 / 中等 / 困难
   - 杀手数独：入门 / 中等 / 困难
 - **游戏辅助**：笔记模式、撤销 / 重做、错误计数、计时、暂停自动存档、进入游戏自动提示续玩
-- **账户系统**：注册 / 登录 / 注销，个人资料（相册选头像、本地存储），修改用户名 / 手机号 / 密码，注销账号
-- **云端存档**：手动保存 / 加载，暂停自动保存
+- **账户系统**：注册 / 登录 / 注销，个人资料（相册选头像、服务器同步，换设备可恢复），修改用户名 / 手机号 / 密码，注销账号
+- **云端存档**：手动保存 / 加载，暂停自动保存，未游玩的新盘不会覆盖旧存档
 - **排行榜**：提交积分、总榜、个人统计（总局数 / 积分 / 胜率），积分公式与 Flutter 版一致
 - **音效与反馈**：SoundPool 音效 + 震动反馈
 
@@ -66,15 +66,19 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## 连接后端
 
-后端沿用原 Flutter 项目的 Dart shelf 服务（端口 8080，依赖 MySQL）：
+后端为独立的 Go 服务（[go-sudoku-backend](https://github.com/hihukayo/go-sudoku-backend.git)，端口 8080，依赖 MySQL）：
 
 ```bash
-cd server        # Flutter 项目的 sudoku/server 目录
-dart run bin/server.dart
+git clone https://github.com/hihukayo/go-sudoku-backend.git
+cd go-sudoku-backend
+go build -o server.exe .
+.\server.exe
+# 看到「服务器已启动: http://localhost:8080」即成功
 ```
 
 - 模拟器：App 自动使用 `http://10.0.2.2:8080/api`
-- 真机：先执行 `adb reverse tcp:8080 tcp:8080`，App 自动使用 `http://localhost:8080/api`
+- 真机（USB）：先执行 `adb reverse tcp:8080 tcp:8080`，App 自动使用 `http://localhost:8080/api`
+- 真机（同一 WiFi）：手机与电脑连同一热点，电脑运行 `ipconfig` 查看局域网 IP（如 `192.168.43.74`），App 设置 → 服务器地址 填写 `192.168.43.74:8080`，无需 USB
 
 ## 截图
 

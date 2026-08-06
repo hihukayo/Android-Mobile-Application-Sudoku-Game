@@ -39,6 +39,10 @@ class GameController(val username: String) {
     var saving by mutableStateOf(false)
     var loadingSave by mutableStateOf(false)
 
+    /** 棋盘是否被玩家动过（防止新盘无意覆盖旧存档） */
+    var dirty by mutableStateOf(false)
+        private set
+
     var puzzle by mutableStateOf(SudokuPuzzle(3))
         private set
     var boardSize by mutableStateOf(3)
@@ -182,6 +186,7 @@ class GameController(val username: String) {
         noteMode = false
         gameOver = false
         errors = 0
+        dirty = false
         paused = false
         statusMsg = ""
         lastScore = 0
@@ -200,7 +205,7 @@ class GameController(val username: String) {
         SoundManager.click()
         val becoming = !paused
         paused = becoming
-        if (becoming && !gameOver && !isSolved) saveGame(silent = true)
+        if (becoming && !gameOver && !isSolved && dirty) saveGame(silent = true)
     }
 
     fun selectCell(r: Int, c: Int) {
@@ -222,6 +227,7 @@ class GameController(val username: String) {
         val c = selectedCol ?: return
         if (paused || gameOver) return
         if (puzzle.given[r][c]) return
+        dirty = true
 
         if (noteMode) {
             val oldNotes = puzzle.notes[r][c].toSet()
@@ -269,6 +275,7 @@ class GameController(val username: String) {
         val old = puzzle.cells[r][c]
         val oldNotes = puzzle.notes[r][c].toSet()
         if (old == 0 && oldNotes.isEmpty()) return
+        dirty = true
         puzzle.cells[r][c] = 0
         puzzle.notes[r][c].clear()
         errorCells = errorCells - "$r,$c"
@@ -290,6 +297,7 @@ class GameController(val username: String) {
     fun undo() {
         SoundManager.click()
         if (undoStack.isEmpty() || paused || gameOver) return
+        dirty = true
         val entry = undoStack.removeLast()
         redoStack.addLast(entry)
         undoDepth = undoStack.size
@@ -303,6 +311,7 @@ class GameController(val username: String) {
     fun redo() {
         SoundManager.click()
         if (redoStack.isEmpty() || paused || gameOver) return
+        dirty = true
         val entry = redoStack.removeLast()
         undoStack.addLast(entry)
         undoDepth = undoStack.size
@@ -423,6 +432,7 @@ class GameController(val username: String) {
     }
 
     fun autoSave() {
+        if (!dirty) return
         if (!gameOver && !isSolved && seconds > 3) saveGame(silent = true)
     }
 
@@ -484,11 +494,12 @@ class GameController(val username: String) {
         hasGivenUp = false
         gameOver = errors >= (if (boardSize == 3) 3 else 6)
         paused = false
+        dirty = false
         undoStack.clear()
         redoStack.clear()
         undoDepth = 0
         redoDepth = 0
-        errorCells = emptySet()
+        syncErrors()
         selectedRow = null
         selectedCol = null
         revision++

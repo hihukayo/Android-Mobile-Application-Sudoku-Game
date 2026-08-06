@@ -56,6 +56,10 @@ private fun maskPhone(phone: String): String =
 fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessionEnd: () -> Unit) {
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val showSnack: suspend (String) -> Unit = { msg ->
+        snackbar.currentSnackbarData?.dismiss()
+        snackbar.showSnackbar(msg)
+    }
     var showEditUsername by remember { mutableStateOf(false) }
     var showEditPhone by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
@@ -139,9 +143,13 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             label = "请输入新用户名",
             onDismiss = { showEditUsername = false },
             onConfirm = { value, pwd ->
+                if (value.isBlank() || pwd.isBlank()) {
+                    scope.launch { showSnack("请输入新用户名和当前密码") }
+                    return@EditValueDialog
+                }
                 scope.launch {
                     val res = ApiClient.updateUsername(username, value.trim(), pwd)
-                    snackbar.showSnackbar(res.optString("message", "操作完成"))
+                    showSnack(res.optString("message", "操作完成"))
                 }
                 showEditUsername = false
             },
@@ -154,9 +162,13 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             phoneKeyboard = true,
             onDismiss = { showEditPhone = false },
             onConfirm = { value, pwd ->
+                if (value.isBlank() || pwd.isBlank()) {
+                    scope.launch { showSnack("请输入新手机号和当前密码") }
+                    return@EditValueDialog
+                }
                 scope.launch {
                     val res = ApiClient.updatePhone(username, value.trim(), pwd)
-                    snackbar.showSnackbar(res.optString("message", "操作完成"))
+                    showSnack(res.optString("message", "操作完成"))
                 }
                 showEditPhone = false
             },
@@ -167,12 +179,16 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             onDismiss = { showPassword = false },
             onConfirm = { old, new, confirm ->
                 if (new != confirm) {
-                    scope.launch { snackbar.showSnackbar("两次密码不一致") }
+                    scope.launch { showSnack("两次密码不一致") }
+                    return@PasswordDialog
+                }
+                if (old.isBlank() || new.isBlank()) {
+                    scope.launch { showSnack("请填写完整") }
                     return@PasswordDialog
                 }
                 scope.launch {
                     val res = ApiClient.updatePassword(username, old, new)
-                    snackbar.showSnackbar(res.optString("message", "操作完成"))
+                    showSnack(res.optString("message", "操作完成"))
                 }
                 showPassword = false
             },
@@ -183,12 +199,16 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             onDismiss = { showDelete = false },
             onConfirm = { phoneInput, pwd, confirmPwd ->
                 if (pwd != confirmPwd) {
-                    scope.launch { snackbar.showSnackbar("两次密码不一致") }
+                    scope.launch { showSnack("两次密码不一致") }
+                    return@DeleteAccountDialog
+                }
+                if (phoneInput.isBlank() || pwd.isBlank()) {
+                    scope.launch { showSnack("请填写手机号和密码") }
                     return@DeleteAccountDialog
                 }
                 scope.launch {
                     val res = ApiClient.deleteAccount(username, phoneInput.trim(), pwd)
-                    snackbar.showSnackbar(res.optString("message", "操作完成"))
+                    showSnack(res.optString("message", "操作完成"))
                     if (res.optBoolean("success")) {
                         Session.clearLogin()
                         showDelete = false
@@ -207,7 +227,7 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
                 Session.setServerAddress(addr)
                 serverAddr = addr
                 showServerAddress = false
-                scope.launch { snackbar.showSnackbar(if (addr.isEmpty()) "已恢复默认连接" else "服务器地址已保存") }
+                scope.launch { showSnack(if (addr.isEmpty()) "已恢复默认连接" else "服务器地址已保存") }
             },
         )
     }

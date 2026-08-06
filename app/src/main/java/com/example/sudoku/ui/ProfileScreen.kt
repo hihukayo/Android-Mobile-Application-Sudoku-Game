@@ -33,6 +33,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import com.example.sudoku.data.ApiClient
 import com.example.sudoku.data.Session
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
@@ -64,12 +66,23 @@ fun ProfileScreen(
     var totalScore by remember { mutableStateOf(0) }
     var winRate by remember { mutableStateOf(0.0) }
     var statsLoading by remember { mutableStateOf(true) }
+    val scope = rememberCoroutineScope()
 
-    // 加载头像
+    // 加载头像：先本地缓存，再从服务器同步（跨设备/跨 App 恢复）
     LaunchedEffect(Unit) {
-        val bytes = Session.getAvatar(username)
-        if (bytes != null) {
-            avatar = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        val local = Session.getAvatar(username)
+        if (local != null) {
+            avatar = BitmapFactory.decodeByteArray(local, 0, local.size)
+        }
+        try {
+            val res = withContext(Dispatchers.IO) { ApiClient.getAvatar(username) }
+            val serverAvatar = res.optString("avatar", "")
+            if (serverAvatar.isNotEmpty()) {
+                val bytes = android.util.Base64.decode(serverAvatar, android.util.Base64.NO_WRAP)
+                avatar = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                Session.setAvatar(username, bytes)
+            }
+        } catch (_: Exception) {
         }
     }
 
@@ -100,6 +113,15 @@ fun ProfileScreen(
                     val saved = out.toByteArray()
                     Session.setAvatar(username, saved)
                     avatar = bmp
+                    // 上传服务器同步
+                    scope.launch {
+                        try {
+                            withContext(Dispatchers.IO) {
+                                ApiClient.uploadAvatar(username, android.util.Base64.encodeToString(saved, android.util.Base64.NO_WRAP))
+                            }
+                        } catch (_: Exception) {
+                        }
+                    }
                 }
             } catch (_: Exception) {
             }

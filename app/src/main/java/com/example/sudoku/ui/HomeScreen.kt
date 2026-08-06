@@ -15,7 +15,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,10 +27,11 @@ import com.example.sudoku.ui.game.GameScreen
 fun HomeScreen(
     username: String,
     phone: String,
+    selectedTab: Int,
+    onTabChange: (Int) -> Unit,
     onOpenSettings: () -> Unit,
     onSessionEnd: () -> Unit,
 ) {
-    var tab by rememberSaveable { mutableIntStateOf(0) }
     val gameController = remember { GameController(username) }
     var rankTick by remember { mutableIntStateOf(0) }
     var profileTick by remember { mutableIntStateOf(0) }
@@ -47,16 +47,16 @@ fun HomeScreen(
                     unselectedTextColor = GreyBlue,
                 )
                 NavigationBarItem(
-                    selected = tab == 0,
-                    onClick = { tab = 0 },
+                    selected = selectedTab == 0,
+                    onClick = { onTabChange(0) },
                     icon = { Icon(AppIcons.GridOn, contentDescription = null) },
                     label = { Text("数独") },
                     colors = itemColors,
                 )
                 NavigationBarItem(
-                    selected = tab == 1,
+                    selected = selectedTab == 1,
                     onClick = {
-                        tab = 1
+                        onTabChange(1)
                         rankTick++
                     },
                     icon = { Icon(AppIcons.EmojiEvents, contentDescription = null) },
@@ -64,9 +64,9 @@ fun HomeScreen(
                     colors = itemColors,
                 )
                 NavigationBarItem(
-                    selected = tab == 2,
+                    selected = selectedTab == 2,
                     onClick = {
-                        tab = 2
+                        onTabChange(2)
                         profileTick++
                     },
                     icon = { Icon(AppIcons.Person, contentDescription = null) },
@@ -79,7 +79,7 @@ fun HomeScreen(
         // 与 Flutter 版一致：整体限制最大宽度 480dp 居中
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             Box(Modifier.widthIn(max = 480.dp).fillMaxSize()) {
-                when (tab) {
+                when (selectedTab) {
                     0 -> GameScreen(gameController)
                     1 -> RankScreen(username = username, refreshTick = rankTick)
                     else -> ProfileScreen(

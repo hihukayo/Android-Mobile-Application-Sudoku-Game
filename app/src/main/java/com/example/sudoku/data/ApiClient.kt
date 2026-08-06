@@ -179,4 +179,13 @@ object ApiClient {
 
     suspend fun getUserStats(username: String): JSONObject =
         request("GET", "/rank/user?username=${java.net.URLEncoder.encode(username, "UTF-8")}")
+
+    suspend fun getAvatar(username: String): JSONObject =
+        request("GET", "/avatar?username=${java.net.URLEncoder.encode(username, "UTF-8")}")
+
+    suspend fun uploadAvatar(username: String, avatarBase64: String): JSONObject =
+        request("PUT", "/avatar", JSONObject().apply {
+            put("username", username)
+            put("avatar", avatarBase64)
+        })
 }
