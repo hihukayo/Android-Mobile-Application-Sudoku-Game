@@ -21,10 +21,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sudoku.R
 import com.example.sudoku.data.Session
 
 /** 服务器地址设置对话框（登录/注册/设置页共用，文案与 Flutter 版一致） */
@@ -37,10 +40,10 @@ fun ServerAddressDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    AppIcons.Dns,
+                    painter = painterResource(R.drawable.db_icon),
                     contentDescription = null,
-                    tint = Blue,
-                    modifier = Modifier.size(20.dp),
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(32.dp),
                 )
                 Spacer(Modifier.width(10.dp))
                 Text("服务器地址", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
