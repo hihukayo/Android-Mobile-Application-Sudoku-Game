@@ -423,17 +423,21 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
             .padding(horizontal = 24.dp, vertical = 4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-            GameTextBtn("新局", enabled = !controller.generating, onClick = { controller.newGame() })
+            GameTextBtn("新局", enabled = !controller.generating, onClick = { controller.newGame() }, icon = AppIcons.Refresh)
             GameTextBtn(
                 "完成",
                 fill = true,
                 enabled = !disabled && !controller.isSolved && !controller.hasGivenUp,
                 onClick = { controller.checkCompletion() },
+                icon = AppIcons.StarOutline,
+                overlayIcon = AppIcons.Check,
             )
             GameTextBtn(
                 "求解",
                 enabled = !disabled && !controller.isSolved && !controller.hasGivenUp,
                 onClick = { controller.autoSolve() },
+                icon = AppIcons.Lightbulb,
+                iconAtEnd = true,
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -460,7 +464,15 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
 }
 
 @Composable
-private fun GameTextBtn(label: String, onClick: () -> Unit, fill: Boolean = false, enabled: Boolean = true) {
+private fun GameTextBtn(
+    label: String,
+    onClick: () -> Unit,
+    fill: Boolean = false,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+    overlayIcon: ImageVector? = null,
+    iconAtEnd: Boolean = false,
+) {
     val bg = when {
         !enabled -> Color(0xFFF1F1F1)
         fill -> Blue
@@ -480,7 +492,27 @@ private fun GameTextBtn(label: String, onClick: () -> Unit, fill: Boolean = fals
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, fontSize = 15.sp, fontWeight = if (fill) FontWeight.SemiBold else FontWeight.Medium, color = fg)
+        if (icon == null) {
+            Text(label, fontSize = 15.sp, fontWeight = if (fill) FontWeight.SemiBold else FontWeight.Medium, color = fg)
+        } else {
+            // 图标+文字整体居中，间距 4（与下排撤销/重置/重做一致）
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (iconAtEnd) {
+                    Text(label, fontSize = 15.sp, fontWeight = if (fill) FontWeight.SemiBold else FontWeight.Medium, color = fg)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
+                } else {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(18.dp)) {
+                        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
+                        if (overlayIcon != null) {
+                            Icon(overlayIcon, contentDescription = null, tint = fg, modifier = Modifier.size(9.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(4.dp))
+                    Text(label, fontSize = 15.sp, fontWeight = if (fill) FontWeight.SemiBold else FontWeight.Medium, color = fg)
+                }
+            }
+        }
     }
 }
 
@@ -501,20 +533,20 @@ private fun GameIconTextBtn(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
+        // 图标+文字整体居中，间距 4（撤销/重置/重做/存档/读档统一）
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (iconAtEnd) {
-                Text(label, fontSize = 13.sp, color = color)
+                Text(label, fontSize = 15.sp, color = color) // 与上排按钮文字大小一致
                 Spacer(Modifier.width(4.dp))
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
             } else {
                 Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text(label, fontSize = 13.sp, color = color)
+                Text(label, fontSize = 15.sp, color = color) // 与上排按钮文字大小一致
             }
         }
     }
 }
-
 @Composable
 private fun HiddenNumberInput(
     gs: Int,
