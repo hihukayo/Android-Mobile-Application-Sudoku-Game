@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -15,10 +17,30 @@ android {
         versionName = "1.1.1"
     }
 
+    signingConfigs {
+        create("release") {
+            val ksFile = File(rootProject.rootDir, "keystore/sudoku-release.jks")
+            if (ksFile.exists()) {
+                val props = Properties().apply {
+                    val pf = File(rootProject.rootDir, "keystore/keystore-password.txt")
+                    if (pf.exists()) pf.inputStream().use { load(it) }
+                }
+                storeFile = ksFile
+                storePassword = props.getProperty("storepass", "")
+                keyAlias = props.getProperty("alias", "sudoku")
+                keyPassword = props.getProperty("keypass", "")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // 存在本地 keystore 时签名，否则输出 unsigned 供本地调试
+            if (File(rootProject.rootDir, "keystore/sudoku-release.jks").exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
