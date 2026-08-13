@@ -33,6 +33,7 @@ import com.example.sudoku.data.Session
 /** 服务器地址设置对话框（登录/注册/设置页共用，文案与 Flutter 版一致） */
 @Composable
 fun ServerAddressDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    val sc = LocalSudokuColors.current
     var value by remember { mutableStateOf(Session.getServerAddress()) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -51,7 +52,7 @@ fun ServerAddressDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
         },
         text = {
             Column {
-                Text("留空则自动连接（USB / 模拟器）", fontSize = 13.sp, color = GreyBlue)
+                Text("留空则自动连接（USB / 模拟器）", fontSize = 13.sp, color = sc.textFaint)
                 Spacer(Modifier.height(14.dp))
                 OutlinedTextField(
                     value = value,

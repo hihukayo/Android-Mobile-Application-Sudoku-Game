@@ -1,4 +1,4 @@
-﻿package com.example.sudoku.ui
+package com.example.sudoku.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -60,6 +60,7 @@ fun ProfileScreen(
     onOpenSettings: () -> Unit,
     onLogout: () -> Unit,
 ) {
+    val sc = LocalSudokuColors.current
     val context = LocalContext.current
     var avatar by remember { mutableStateOf<Bitmap?>(null) }
     var totalGames by remember { mutableStateOf(0) }
@@ -170,19 +171,19 @@ fun ProfileScreen(
                     .padding(3.dp)
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(sc.chipBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(AppIcons.CameraAlt, contentDescription = null, tint = DarkSlate, modifier = Modifier.size(16.dp))
+                Icon(AppIcons.CameraAlt, contentDescription = null, tint = sc.textSecondary, modifier = Modifier.size(16.dp))
             }
         }
         Spacer(Modifier.height(12.dp))
-        Text(username, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Ink)
+        Text(username, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = sc.textPrimary)
         Spacer(Modifier.height(24.dp))
 
         // 统计卡片
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F7FA)),
+            colors = CardDefaults.cardColors(containerColor = sc.surfaceAlt),
             shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(0.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -216,10 +217,10 @@ fun ProfileScreen(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(AppIcons.Settings, contentDescription = null, tint = DarkSlate, modifier = Modifier.size(22.dp))
+                Icon(AppIcons.Settings, contentDescription = null, tint = sc.textSecondary, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(16.dp))
                 Text("设置", fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Icon(AppIcons.ChevronRight, contentDescription = null, tint = Color(0xFFB0BEC5), modifier = Modifier.size(20.dp))
+                Icon(AppIcons.ChevronRight, contentDescription = null, tint = sc.textFaint, modifier = Modifier.size(20.dp))
             }
         }
         Spacer(Modifier.height(32.dp))
@@ -255,25 +256,31 @@ private fun decodeSampled(bytes: ByteArray, maxSize: Int): Bitmap {
     return if (side > maxSize) Bitmap.createScaledBitmap(cropped, maxSize, maxSize, true) else cropped
 }
 
-private fun winRateColor(rate: Double): Color = when {
-    rate >= 70 -> Color(0xFF2E7D32)
-    rate >= 40 -> Blue
-    rate > 0 -> Color(0xFFE65100)
-    else -> Color(0xFF9E9E9E)
+@Composable
+private fun winRateColor(rate: Double): Color {
+    val sc = LocalSudokuColors.current
+    return when {
+        rate >= 70 -> sc.userInput
+        rate >= 40 -> Blue
+        rate > 0 -> Color(0xFFFFA726)
+        else -> sc.textFaint
+    }
 }
 
 @Composable
 private fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, color: Color) {
+    val sc = LocalSudokuColors.current
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(22.dp))
         Spacer(Modifier.height(6.dp))
         Text(value, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = color)
         Spacer(Modifier.height(2.dp))
-        Text(label, fontSize = 12.sp, color = GreyBlue)
+        Text(label, fontSize = 12.sp, color = sc.textFaint)
     }
 }
 
 @Composable
 private fun StatDivider() {
-    Box(Modifier.width(1.dp).height(40.dp).background(Color(0xFFE0E0E0)))
+    val sc = LocalSudokuColors.current
+    Box(Modifier.width(1.dp).height(40.dp).background(sc.divider))
 }

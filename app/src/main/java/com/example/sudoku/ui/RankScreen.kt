@@ -49,6 +49,7 @@ private data class RankItem(
 
 @Composable
 fun RankScreen(username: String, refreshTick: Int) {
+    val sc = LocalSudokuColors.current
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
     var items by remember { mutableStateOf(listOf<RankItem>()) }
@@ -90,18 +91,18 @@ fun RankScreen(username: String, refreshTick: Int) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .background(Color(0xFFF5F7FA))
+                .background(sc.surfaceAlt)
                 .padding(horizontal = 12.dp, vertical = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.width(4.dp))
                 Box(Modifier.width(36.dp), contentAlignment = Alignment.Center) {
-                    Text("排名", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = GreyBlue)
+                    Text("排名", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = sc.textFaint)
                 }
                 Spacer(Modifier.width(4.dp))
-                Text("玩家", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = GreyBlue, modifier = Modifier.weight(1f))
-                Text("积分", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = DarkSlate, modifier = Modifier.width(72.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                Text("胜率", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = GreyBlue, modifier = Modifier.width(64.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("玩家", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = sc.textFaint, modifier = Modifier.weight(1f))
+                Text("积分", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = sc.textSecondary, modifier = Modifier.width(72.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                Text("胜率", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = sc.textFaint, modifier = Modifier.width(64.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
         HorizontalDivider(thickness = 1.dp)
@@ -110,9 +111,9 @@ fun RankScreen(username: String, refreshTick: Int) {
             loading -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             error.isNotEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(AppIcons.CloudOff, contentDescription = null, tint = Color(0xFF90A4AE), modifier = Modifier.size(56.dp))
+                    Icon(AppIcons.CloudOff, contentDescription = null, tint = sc.textFaint, modifier = Modifier.size(56.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text(error, color = Color(0xFF757575))
+                    Text(error, color = sc.textFaint)
                     Spacer(Modifier.height(12.dp))
                     TextButton(onClick = { retryTick++ }) {
                         Icon(AppIcons.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -123,11 +124,11 @@ fun RankScreen(username: String, refreshTick: Int) {
             }
             items.isEmpty() -> Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(AppIcons.EmojiEvents, contentDescription = null, tint = Color(0xFFE0E0E0), modifier = Modifier.size(64.dp))
+                    Icon(AppIcons.EmojiEvents, contentDescription = null, tint = sc.divider, modifier = Modifier.size(64.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text("暂无排行数据", fontSize = 16.sp, color = Color(0xFF9E9E9E))
+                    Text("暂无排行数据", fontSize = 16.sp, color = sc.textFaint)
                     Spacer(Modifier.height(4.dp))
-                    Text("完成一局游戏后数据将自动记录", fontSize = 13.sp, color = Color(0xFFBDBDBD))
+                    Text("完成一局游戏后数据将自动记录", fontSize = 13.sp, color = sc.textFaint)
                 }
             }
             else -> LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
@@ -141,7 +142,8 @@ fun RankScreen(username: String, refreshTick: Int) {
 
 @Composable
 private fun RankItemRow(rank: Int, item: RankItem, isMe: Boolean) {
-    val bg = if (isMe) Color(0xFFF0F4FF) else Color.Transparent
+    val sc = LocalSudokuColors.current
+    val bg = if (isMe) sc.selectedBg else Color.Transparent
     Row(
         Modifier
             .fillMaxWidth()
@@ -161,7 +163,7 @@ private fun RankItemRow(rank: Int, item: RankItem, isMe: Boolean) {
                 item.username,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = if (isMe) Blue else Color(0xDD000000),
+                color = if (isMe) Blue else sc.textPrimary,
             )
             if (isMe) {
                 Spacer(Modifier.width(6.dp))
@@ -173,7 +175,7 @@ private fun RankItemRow(rank: Int, item: RankItem, isMe: Boolean) {
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            color = DarkSlate,
+            color = sc.textSecondary,
             modifier = Modifier.width(72.dp),
         )
         Text(
@@ -190,6 +192,7 @@ private fun RankItemRow(rank: Int, item: RankItem, isMe: Boolean) {
 
 @Composable
 private fun RankBadge(rank: Int, isMe: Boolean) {
+    val sc = LocalSudokuColors.current
     when (rank) {
         1 -> Icon(AppIcons.EmojiEvents, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(26.dp))
         2 -> Icon(AppIcons.EmojiEvents, contentDescription = null, tint = Color(0xFFC0C0C0), modifier = Modifier.size(26.dp))
@@ -198,14 +201,14 @@ private fun RankBadge(rank: Int, isMe: Boolean) {
             Modifier
                 .size(26.dp)
                 .clip(CircleShape)
-                .background(if (isMe) Blue else Color(0xFFEEEEEE)),
+                .background(if (isMe) Blue else sc.chipBg),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 "$rank",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isMe) Color.White else DarkSlate,
+                color = if (isMe) Color.White else sc.textSecondary,
             )
         }
     }
@@ -217,9 +220,13 @@ private fun formatScore(s: Int): String = when {
     else -> "$s"
 }
 
-private fun winRateColor(rate: Double): Color = when {
-    rate >= 70 -> Color(0xFF2E7D32)
-    rate >= 40 -> Blue
-    rate > 0 -> Color(0xFFE65100)
-    else -> Color(0xFF9E9E9E)
+@Composable
+private fun winRateColor(rate: Double): Color {
+    val sc = LocalSudokuColors.current
+    return when {
+        rate >= 70 -> sc.userInput
+        rate >= 40 -> Blue
+        rate > 0 -> Color(0xFFFFA726)
+        else -> sc.textFaint
+    }
 }

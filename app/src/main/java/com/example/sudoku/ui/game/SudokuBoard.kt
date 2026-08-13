@@ -32,14 +32,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sudoku.model.SudokuPuzzle
-import com.example.sudoku.ui.Blue
-import com.example.sudoku.ui.DarkSlate
-import com.example.sudoku.ui.Green
-import com.example.sudoku.ui.HighlightBg
-import com.example.sudoku.ui.Ink
-import com.example.sudoku.ui.LightGrey
+import com.example.sudoku.ui.LocalSudokuColors
 import com.example.sudoku.ui.Red
-import com.example.sudoku.ui.SelectedBg
 
 @Composable
 fun SudokuBoard(
@@ -52,6 +46,7 @@ fun SudokuBoard(
     onCellTap: (Int, Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val sc = LocalSudokuColors.current
     val gs = puzzle.gridSize
     val bs = puzzle.boardSize
     val textMeasurer = rememberTextMeasurer()
@@ -87,9 +82,9 @@ fun SudokuBoard(
                         (r == selectedRow || c == selectedCol ||
                             (r / bs == selectedRow / bs && c / bs == selectedCol / bs))
                     val bg = when {
-                        r == selectedRow && c == selectedCol -> SelectedBg
-                        highlighted -> HighlightBg
-                        else -> Color.White
+                        r == selectedRow && c == selectedCol -> sc.selectedBg
+                        highlighted -> sc.highlightBg
+                        else -> sc.boardBg
                     }
                     drawRect(bg, topLeft = Offset(c * cell, r * cell), size = Size(cell, cell))
                 }
@@ -102,9 +97,9 @@ fun SudokuBoard(
                         val given = puzzle.given[r][c]
                         val isError = errorCells.contains("$r,$c")
                         val color = when {
-                            given -> Ink
+                            given -> sc.textPrimary
                             isError -> Red
-                            else -> Green
+                            else -> sc.userInput
                         }
                         val weight = if (given) FontWeight.Bold else FontWeight.SemiBold
                         val style = TextStyle(
@@ -125,7 +120,7 @@ fun SudokuBoard(
                             val style = TextStyle(
                                 fontSize = noteSize,
                                 fontWeight = FontWeight.Medium,
-                                color = Blue,
+                                color = sc.noteText,
                             )
                             val layout = textMeasurer.measure(AnnotatedString(label), style = style)
                             drawText(layout, topLeft = Offset(c * cell + cell * 0.06f, r * cell + cell * 0.05f))
@@ -141,14 +136,14 @@ fun SudokuBoard(
                 val y = i * cell
                 val isThick = !puzzle.isKiller && i % bs == 0
                 val stroke = if (isThick) thick else thin
-                val color = if (isThick) DarkSlate else LightGrey
+                val color = if (isThick) sc.textSecondary else sc.boardLine
                 drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = stroke)
                 drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke)
             }
             // 棋盘外圈边框（深色圆角，所有模式统一；错误笼子贴边时对应线段在笼子层最后标红）
             val outerW = 2.5.dp.toPx()
             drawRoundRect(
-                color = DarkSlate,
+                color = sc.textSecondary,
                 topLeft = Offset(outerW / 2, outerW / 2),
                 size = Size(size.width - outerW, size.height - outerW),
                 cornerRadius = CornerRadius(10.dp.toPx()),
@@ -156,14 +151,14 @@ fun SudokuBoard(
             )
             // 杀手笼子覆盖层
             if (puzzle.isKiller) {
-                drawCages(puzzle, cell, textMeasurer)
+                drawCages(puzzle, cell, textMeasurer, sc.textSecondary)
             }
             }
         }
     }
 }
 
-private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer: androidx.compose.ui.text.TextMeasurer) {
+private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer: androidx.compose.ui.text.TextMeasurer, cageColor: Color) {
     val gs = puzzle.gridSize
     val cages = puzzle.cages ?: return
     val invalid = puzzle.invalidCages()
@@ -171,7 +166,7 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
     for (isBad in listOf(false, true)) {
         for (ci in cages.indices) {
             if (invalid.contains(ci) != isBad) continue
-            val color = if (isBad) Red else DarkSlate
+            val color = if (isBad) Red else cageColor
             val stroke = 2.dp.toPx()
             val cells = cages[ci].cellIndices.toSet()
             for (idx in cells) {
@@ -214,7 +209,7 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
                 botC = c
             }
         }
-        val sumStyle = TextStyle(fontSize = 8.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
+        val sumStyle = TextStyle(fontSize = 8.sp, fontWeight = FontWeight.Bold, color = cageColor)
         val label = cages[ci].labelText()
         val layout = textMeasurer.measure(AnnotatedString(label), style = sumStyle)
         // 所有笼子标签统一向右内缩，避免与棋盘右边框及圆角边线重叠

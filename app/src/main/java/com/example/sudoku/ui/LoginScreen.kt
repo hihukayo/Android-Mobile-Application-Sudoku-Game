@@ -57,6 +57,7 @@ fun LoginRoot(
 
 @Composable
 fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) {
+    val sc = LocalSudokuColors.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var account by remember { mutableStateOf("") }
@@ -84,7 +85,7 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
             ) {
                 Text("数独", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
-                Text("Sudoku", style = MaterialTheme.typography.bodySmall, color = GreyBlue)
+                Text("Sudoku", style = MaterialTheme.typography.bodySmall, color = sc.textFaint)
                 Spacer(Modifier.height(40.dp))
                 OutlinedTextField(
                     value = account,
@@ -158,7 +159,7 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                     .align(Alignment.TopEnd)
                     .padding(top = 8.dp, end = 12.dp),
             ) {
-                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = GreyBlue)
+                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = sc.textFaint)
             }
         }
     }

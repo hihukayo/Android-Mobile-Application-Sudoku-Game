@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +55,7 @@ private fun maskPhone(phone: String): String =
 
 @Composable
 fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessionEnd: () -> Unit) {
+    val sc = LocalSudokuColors.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val showSnack: suspend (String) -> Unit = { msg ->
@@ -65,6 +67,7 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
     var showPassword by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var showServerAddress by remember { mutableStateOf(false) }
+    var showThemeMode by remember { mutableStateOf(false) }
     var serverAddr by remember { mutableStateOf(Session.getServerAddress().orEmpty()) }
 
     Scaffold(
@@ -82,9 +85,9 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("←", fontSize = 22.sp, color = Ink)
+                    Text("←", fontSize = 22.sp, color = sc.textPrimary)
                 }
-                Text("设置", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Ink)
+                Text("设置", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = sc.textPrimary)
             }
         },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -120,6 +123,21 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
+            SettingCard(
+                icon = when (AppThemeMode.value) {
+                    "light" -> AppIcons.Sunny
+                    "dark" -> AppIcons.DarkMode
+                    else -> AppIcons.Contrast
+                },
+                title = "深色模式",
+                subtitle = when (AppThemeMode.value) {
+                    "light" -> "浅色"
+                    "dark" -> "深色"
+                    else -> "跟随系统"
+                },
+                onClick = { showThemeMode = true },
+            )
+            Spacer(Modifier.height(12.dp))
             SettingCard(
                 icon = AppIcons.CloudOff,
                 title = "服务器地址",
@@ -231,6 +249,9 @@ fun SettingsScreen(username: String, phone: String, onBack: () -> Unit, onSessio
             },
         )
     }
+    if (showThemeMode) {
+        ThemeModeDialog(onDismiss = { showThemeMode = false })
+    }
 }
 
 @Composable
@@ -241,6 +262,7 @@ private fun SettingCard(
     onClick: () -> Unit,
     danger: Boolean = false,
 ) {
+    val sc = LocalSudokuColors.current
     Card(
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(1.dp),
@@ -253,15 +275,15 @@ private fun SettingCard(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(icon, contentDescription = null, tint = if (danger) Red else DarkSlate, modifier = Modifier.size(22.dp))
+            Icon(icon, contentDescription = null, tint = if (danger) Red else sc.textSecondary, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, fontSize = 15.sp, color = if (danger) Red else Ink, fontWeight = if (danger) FontWeight.SemiBold else FontWeight.Normal)
+                Text(title, fontSize = 15.sp, color = if (danger) Red else sc.textPrimary, fontWeight = if (danger) FontWeight.SemiBold else FontWeight.Normal)
                 if (subtitle.isNotEmpty()) {
-                    Text(subtitle, fontSize = 13.sp, color = GreyBlue)
+                    Text(subtitle, fontSize = 13.sp, color = sc.textFaint)
                 }
             }
-            Icon(AppIcons.ChevronRight, contentDescription = null, tint = Color(0xFFB0BEC5), modifier = Modifier.size(20.dp))
+            Icon(AppIcons.ChevronRight, contentDescription = null, tint = sc.textFaint, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -367,5 +389,57 @@ private fun DeleteAccountDialog(onDismiss: () -> Unit, onConfirm: (String, Strin
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }
         },
+    )
+}
+
+@Composable
+private fun ThemeModeDialog(onDismiss: () -> Unit) {
+    val sc = LocalSudokuColors.current
+    val options = listOf(
+        Triple("跟随系统", "system", AppIcons.Contrast),
+        Triple("浅色", "light", AppIcons.Sunny),
+        Triple("深色", "dark", AppIcons.DarkMode),
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = sc.surface,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(AppIcons.DarkMode, contentDescription = null, tint = Blue, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
+                Text("深色模式", fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = sc.textPrimary)
+            }
+        },
+        text = {
+            Column {
+                options.forEach { (label, mode, icon) ->
+                    val selected = AppThemeMode.value == mode
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (selected) sc.selectedBg else Color.Transparent)
+                            .clickable {
+                                AppThemeMode.value = mode
+                                Session.setThemeMode(mode)
+                                onDismiss()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(icon, contentDescription = null, tint = if (selected) Blue else sc.textSecondary, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(label, fontSize = 15.sp, color = sc.textPrimary, modifier = Modifier.weight(1f))
+                        if (selected) {
+                            Icon(AppIcons.Check, contentDescription = null, tint = Blue, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = sc.textSecondary) } },
     )
 }

@@ -32,19 +32,20 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onSessionEnd: () -> Unit,
 ) {
+    val sc = LocalSudokuColors.current
     val gameController = remember { GameController(username) }
     var rankTick by remember { mutableIntStateOf(0) }
     var profileTick by remember { mutableIntStateOf(0) }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
+            NavigationBar(containerColor = sc.background, tonalElevation = 0.dp) {
                 val itemColors = NavigationBarItemDefaults.colors(
                     selectedIconColor = Blue,
                     selectedTextColor = Blue,
                     indicatorColor = Color.Transparent,
-                    unselectedIconColor = GreyBlue,
-                    unselectedTextColor = GreyBlue,
+                    unselectedIconColor = sc.textFaint,
+                    unselectedTextColor = sc.textFaint,
                 )
                 NavigationBarItem(
                     selected = selectedTab == 0,

@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
+    val sc = LocalSudokuColors.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var username by remember { mutableStateOf("") }
@@ -183,7 +184,7 @@ fun RegisterScreen(onBack: () -> Unit, onLoggedIn: (String, String) -> Unit) {
                     .align(Alignment.TopEnd)
                     .padding(top = 8.dp, end = 12.dp),
             ) {
-                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = GreyBlue)
+                Icon(AppIcons.Settings, contentDescription = "服务器设置", tint = sc.textFaint)
             }
         }
     }

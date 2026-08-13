@@ -63,9 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.sudoku.ui.AppIcons
 import com.example.sudoku.ui.Blue
-import com.example.sudoku.ui.DarkSlate
-import com.example.sudoku.ui.GreyBlue
-import com.example.sudoku.ui.Ink
+import com.example.sudoku.ui.LocalSudokuColors
 import com.example.sudoku.ui.Red
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,6 +72,7 @@ import org.json.JSONObject
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GameScreen(controller: GameController) {
+    val sc = LocalSudokuColors.current
     val scope = rememberCoroutineScope()
     var showModeMenu by remember { mutableStateOf(false) }
     var pendingResume by remember { mutableStateOf<JSONObject?>(null) }
@@ -101,7 +100,7 @@ fun GameScreen(controller: GameController) {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(sc.background)
             .onPreviewKeyEvent { event ->
                 if (event.type == KeyEventType.KeyDown) {
                     when (event.key) {
@@ -146,7 +145,7 @@ fun GameScreen(controller: GameController) {
             Icon(
                 AppIcons.MoreHoriz,
                 contentDescription = "模式",
-                tint = GreyBlue,
+                tint = sc.textFaint,
                 modifier = Modifier
                     .padding(6.dp)
                     .size(24.dp)
@@ -161,7 +160,7 @@ fun GameScreen(controller: GameController) {
             Icon(
                 AppIcons.EditNote,
                 contentDescription = "笔记模式",
-                tint = if (controller.noteMode) Blue else GreyBlue,
+                tint = if (controller.noteMode) sc.noteText else sc.textFaint,
                 modifier = Modifier
                     .padding(6.dp)
                     .size(24.dp)
@@ -186,14 +185,14 @@ fun GameScreen(controller: GameController) {
             Icon(
                 AppIcons.ErrorOutline,
                 contentDescription = null,
-                tint = if (controller.errors >= controller.maxErrors) Red else GreyBlue,
+                tint = if (controller.errors >= controller.maxErrors) Red else sc.textFaint,
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 "${controller.errors}/${controller.maxErrors}",
                 fontSize = 12.sp,
-                color = if (controller.errors >= controller.maxErrors) Red else DarkSlate,
+                color = if (controller.errors >= controller.maxErrors) Red else sc.textSecondary,
             )
             Spacer(Modifier.width(24.dp))
             Row(
@@ -205,14 +204,14 @@ fun GameScreen(controller: GameController) {
                 Icon(
                     if (controller.paused) AppIcons.PlayArrow else AppIcons.Pause,
                     contentDescription = null,
-                    tint = if (controller.gameOver || controller.hasGivenUp) Color(0xFFD0D0D0) else Blue,
+                    tint = if (controller.gameOver || controller.hasGivenUp) sc.disabledText else sc.noteText,
                     modifier = Modifier.size(14.dp),
                 )
                 Spacer(Modifier.width(3.dp))
                 Text(
                     controller.formatTime(controller.seconds),
                     fontSize = 12.sp,
-                    color = if (controller.gameOver || controller.hasGivenUp) Color(0xFFD0D0D0) else DarkSlate,
+                    color = if (controller.gameOver || controller.hasGivenUp) sc.disabledText else sc.textSecondary,
                 )
             }
             Spacer(Modifier.width(24.dp))
@@ -223,7 +222,7 @@ fun GameScreen(controller: GameController) {
                 color = diffColor(controller),
             )
             Spacer(Modifier.width(4.dp))
-            Text("${controller.cluesRemaining()}空", fontSize = 12.sp, color = DarkSlate)
+            Text("${controller.cluesRemaining()}空", fontSize = 12.sp, color = sc.textSecondary)
         }
 
         // ---- 棋盘 + 提示（棋盘贴顶，提示紧贴棋盘下边框）----
@@ -377,29 +376,29 @@ private fun letterOf(key: Key, boardSize: Int): Int? {
 
 @Composable
 private fun diffColor(controller: GameController): Color {
+    val sc = LocalSudokuColors.current
     val diff = if (controller.isKiller) controller.killerDifficulty else controller.difficulty
     return when (diff) {
-        "极简" -> Color(0xFFC62828)
-        "困难" -> Color(0xFFE65100)
-        "入门" -> Color(0xFF2E7D32)
+        "极简" -> Color(0xFFEF5350)
+        "困难" -> Color(0xFFFFA726)
+        "入门" -> sc.userInput
         "中等" -> Blue
-        "简单" -> Color(0xFF2E7D32)
-        else -> DarkSlate
+        "简单" -> sc.userInput
+        else -> sc.textSecondary
     }
 }
 
-private val GreenText = Color(0xFF2E7D32)
-
 @Composable
 private fun StatusText(controller: GameController) {
+    val sc = LocalSudokuColors.current
     val style = MaterialTheme.typography.bodySmall
     val (text, color) = when {
-        controller.isSolved -> "解答正确！用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to GreenText
+        controller.isSolved -> "解答正确！用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to sc.userInput
         controller.hasGivenUp -> "已查看答案" to Color(0xFFFF9800)
         controller.gameOver -> "错误 ${controller.errors} 次，游戏结束，用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to Red
-        controller.paused -> "已暂停" to DarkSlate
-        controller.statusMsg.isNotEmpty() -> controller.statusMsg to DarkSlate
-        else -> "" to DarkSlate
+        controller.paused -> "已暂停" to sc.textSecondary
+        controller.statusMsg.isNotEmpty() -> controller.statusMsg to sc.textSecondary
+        else -> "" to sc.textSecondary
     }
     if (text.isNotEmpty()) {
         Text(
@@ -416,6 +415,7 @@ private fun StatusText(controller: GameController) {
 
 @Composable
 private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
+    val sc = LocalSudokuColors.current
     val disabled = controller.paused || controller.gameOver
     Column(
         Modifier
@@ -456,7 +456,7 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
         ) {
             GameIconTextBtn(AppIcons.CloudUpload, "存档", enabled = !controller.saving, onClick = { controller.saveGame() })
             Spacer(Modifier.width(24.dp))
-            Box(Modifier.width(1.dp).height(24.dp).background(Color(0xFFE0E0E0)))
+            Box(Modifier.width(1.dp).height(24.dp).background(sc.divider))
             Spacer(Modifier.width(24.dp))
             GameIconTextBtn(AppIcons.CloudDownload, "读档", enabled = !controller.loadingSave, onClick = onLoad)
         }
@@ -473,15 +473,16 @@ private fun GameTextBtn(
     overlayIcon: ImageVector? = null,
     iconAtEnd: Boolean = false,
 ) {
+    val sc = LocalSudokuColors.current
     val bg = when {
-        !enabled -> Color(0xFFF1F1F1)
-        fill -> Blue
+        !enabled -> sc.chipBg
+        fill -> sc.primary
         else -> Color.Transparent
     }
     val fg = when {
-        !enabled -> Color(0xFFC0C0C0)
-        fill -> Color.White
-        else -> DarkSlate
+        !enabled -> sc.disabledText
+        fill -> sc.onPrimary
+        else -> sc.textSecondary
     }
     Box(
         Modifier
@@ -524,7 +525,8 @@ private fun GameIconTextBtn(
     enabled: Boolean = true,
     iconAtEnd: Boolean = false,
 ) {
-    val color = if (enabled) DarkSlate else Color(0xFFC0C0C0)
+    val sc = LocalSudokuColors.current
+    val color = if (enabled) sc.textSecondary else sc.disabledText
     Box(
         Modifier
             .width(88.dp)
@@ -630,16 +632,17 @@ private fun ModeMenuPopup(current: String, onSelect: (String) -> Unit, modifier:
         "3×3" to "3×3 常规",
         "4×4" to "4×4 常规",
     )
+    val sc = LocalSudokuColors.current
     Column(
         modifier
             .width(104.dp)
             .shadow(4.dp, RoundedCornerShape(8.dp))
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(sc.surface)
             .padding(vertical = 4.dp),
     ) {
         options.forEachIndexed { i, (value, label) ->
-            if (i > 0) HorizontalDivider(thickness = 1.dp, color = Color(0xFFEEEEEE))
+            if (i > 0) HorizontalDivider(thickness = 1.dp, color = sc.divider)
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -647,9 +650,9 @@ private fun ModeMenuPopup(current: String, onSelect: (String) -> Unit, modifier:
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, fontSize = 12.sp, color = DarkSlate, modifier = Modifier.weight(1f))
+                Text(label, fontSize = 12.sp, color = sc.textSecondary, modifier = Modifier.weight(1f))
                 if (current == value) {
-                    Icon(AppIcons.Check, contentDescription = null, tint = Blue, modifier = Modifier.size(13.dp))
+                    Icon(AppIcons.Check, contentDescription = null, tint = sc.noteText, modifier = Modifier.size(13.dp))
                 }
             }
         }
@@ -666,10 +669,11 @@ private fun ResumeDialog(
     onCancel: () -> Unit,
 ) {
     // 与 Flutter 原版一致的存档弹窗：图标 + 标题 + 说明 + 双按钮
+    val sc = LocalSudokuColors.current
     Dialog(onDismissRequest = onCancel) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color.White,
+            color = sc.surface,
             shadowElevation = 8.dp,
             modifier = Modifier.width(300.dp),
         ) {
@@ -680,16 +684,16 @@ private fun ResumeDialog(
                 Icon(
                     AppIcons.CloudDownload,
                     contentDescription = null,
-                    tint = Blue,
+                    tint = sc.noteText,
                     modifier = Modifier.size(44.dp),
                 )
                 Spacer(Modifier.height(14.dp))
-                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Ink)
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = sc.textPrimary)
                 Spacer(Modifier.height(8.dp))
                 Text(
                     message,
                     fontSize = 14.sp,
-                    color = GreyBlue,
+                    color = sc.textFaint,
                     textAlign = TextAlign.Center,
                     lineHeight = 21.sp,
                 )
@@ -702,18 +706,18 @@ private fun ResumeDialog(
                         onClick = onCancel,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                        border = BorderStroke(1.dp, sc.divider),
                         contentPadding = PaddingValues(vertical = 12.dp),
                     ) {
-                        Text(cancelText, fontSize = 15.sp, color = DarkSlate)
+                        Text(cancelText, fontSize = 15.sp, color = sc.textSecondary)
                     }
                     Button(
                         onClick = onConfirm,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Blue,
-                            contentColor = Color.White,
+                            containerColor = sc.primary,
+                            contentColor = sc.onPrimary,
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                         contentPadding = PaddingValues(vertical = 12.dp),
