@@ -502,10 +502,10 @@ private fun GameTextBtn(
                     Spacer(Modifier.width(4.dp))
                     Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
                 } else {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(18.dp)) {
-                        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(18.dp))
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(20.dp)) {
+                        Icon(icon, contentDescription = null, tint = fg, modifier = Modifier.size(20.dp))
                         if (overlayIcon != null) {
-                            Icon(overlayIcon, contentDescription = null, tint = fg, modifier = Modifier.size(9.dp))
+                            Icon(overlayIcon, contentDescription = null, tint = fg, modifier = Modifier.size(7.dp))
                         }
                     }
                     Spacer(Modifier.width(4.dp))
