@@ -133,13 +133,13 @@ fun SudokuBoard(
                     }
                 }
             }
-            // 网格线（仅内部线条，外圈由圆角边框承担）
+            // 网格线（仅内部线条，外圈由圆角边框承担；杀手模式内部统一浅灰细线）
             val thin = 0.5.dp.toPx()
             val thick = 2.dp.toPx()
             for (i in 1 until gs) {
                 val x = i * cell
                 val y = i * cell
-                val isThick = i % bs == 0
+                val isThick = !puzzle.isKiller && i % bs == 0
                 val stroke = if (isThick) thick else thin
                 val color = if (isThick) DarkSlate else LightGrey
                 drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = stroke)
@@ -158,48 +158,37 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
     val gs = puzzle.gridSize
     val cages = puzzle.cages ?: return
     val invalid = puzzle.invalidCages()
-    val inset = 2.5.dp.toPx()
     val cellCage = IntArray(gs * gs) { -1 }
     for (i in cages.indices) {
         for (idx in cages[i].cellIndices) cellCage[idx] = i
     }
     for (ci in cages.indices) {
         val isBad = invalid.contains(ci)
-        val color = if (isBad) Red else Color(0xFFB0BEC5)
-        val stroke = if (isBad) 1.2.dp.toPx() else 0.8.dp.toPx()
+        // 与宫分隔线一致：深色粗线直接沿格子边界绘制；无效笼子标红
+        val color = if (isBad) Red else DarkSlate
+        val stroke = if (isBad) 1.2.dp.toPx() else 2.dp.toPx()
         val cells = cages[ci].cellIndices.toSet()
         for (idx in cells) {
             val r = idx / gs
             val c = idx % gs
             val x = c * cell
             val y = r * cell
+            // 深色线直接覆盖网格细线，转角方正、颜色统一
             if (r > 0 && !cells.contains((r - 1) * gs + c)) {
-                drawLine(color, Offset(x, y + inset), Offset(x + cell, y + inset), stroke)
+                drawLine(color, Offset(x, y), Offset(x + cell, y), stroke)
             }
             if (r < gs - 1 && !cells.contains((r + 1) * gs + c)) {
-                drawLine(color, Offset(x, y + cell - inset), Offset(x + cell, y + cell - inset), stroke)
+                drawLine(color, Offset(x, y + cell), Offset(x + cell, y + cell), stroke)
             }
             if (c > 0 && !cells.contains(r * gs + (c - 1))) {
-                drawLine(color, Offset(x + inset, y), Offset(x + inset, y + cell), stroke)
+                drawLine(color, Offset(x, y), Offset(x, y + cell), stroke)
             }
             if (c < gs - 1 && !cells.contains(r * gs + (c + 1))) {
-                drawLine(color, Offset(x + cell - inset, y), Offset(x + cell - inset, y + cell), stroke)
-            }
-            // 转角斜线
-            if ((r == 0 || !cells.contains((r - 1) * gs + c)) && (c == 0 || !cells.contains(r * gs + (c - 1)))) {
-                drawLine(color, Offset(x + inset, y), Offset(x, y + inset), stroke)
-            }
-            if ((r == 0 || !cells.contains((r - 1) * gs + c)) && (c == gs - 1 || !cells.contains(r * gs + (c + 1)))) {
-                drawLine(color, Offset(x + cell, y + inset), Offset(x + cell - inset, y), stroke)
-            }
-            if ((r == gs - 1 || !cells.contains((r + 1) * gs + c)) && (c == 0 || !cells.contains(r * gs + (c - 1)))) {
-                drawLine(color, Offset(x, y + cell - inset), Offset(x + inset, y + cell), stroke)
-            }
-            if ((r == gs - 1 || !cells.contains((r + 1) * gs + c)) && (c == gs - 1 || !cells.contains(r * gs + (c + 1)))) {
-                drawLine(color, Offset(x + cell - inset, y + cell), Offset(x + cell, y + cell - inset), stroke)
+                drawLine(color, Offset(x + cell, y), Offset(x + cell, y + cell), stroke)
             }
         }
-        // 和值标签（笼子最下、最右的格子）
+        // 笼子标签：每个笼子显示 运算符+结果（如 +10、-2、×100、÷3）
+        val isBottomRightCage = ci == cellCage[gs * gs - 1]
         var botR = -1
         var botC = -1
         for (idx in cages[ci].cellIndices) {
@@ -211,9 +200,12 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
             }
         }
         val sumStyle = TextStyle(fontSize = 8.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
-        val layout = textMeasurer.measure(AnnotatedString("${cages[ci].sum}"), style = sumStyle)
-        val sx = botC * cell + cell - 2.dp.toPx() - layout.size.width
-        val sy = botR * cell + cell - 10.dp.toPx()
+        val label = cages[ci].labelText()
+        val layout = textMeasurer.measure(AnnotatedString(label), style = sumStyle)
+        // 除右下角笼子外，标签可更贴近格子右边缘；右下角笼子保留内缩避免与圆角边线重叠
+        val rightMargin = if (isBottomRightCage) 6.dp.toPx() else 2.dp.toPx()
+        val sx = botC * cell + cell - rightMargin - layout.size.width
+        val sy = botR * cell + cell - 12.dp.toPx()
         drawText(layout, topLeft = Offset(sx, sy))
     }
 }

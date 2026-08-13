@@ -14,6 +14,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.roundToInt
@@ -90,7 +91,8 @@ class GameController(val username: String) {
         private set
     var redoDepth by mutableStateOf(0)
         private set
-    private var generating = false
+    var generating by mutableStateOf(false)
+        private set
     private var timerJob: Job? = null
     private var statusJob: Job? = null
 
@@ -171,34 +173,46 @@ class GameController(val username: String) {
             SoundManager.click()
         }
         generating = true
-        puzzle = if (isKiller) {
-            val diffRoll = rng.nextInt(100)
-            killerDifficulty = if (diffRoll < 25) "入门" else if (diffRoll < 75) "中等" else "困难"
-            SudokuGenerator(3).generateKiller(killerDifficulty)
-        } else {
-            pickClueCount()
-            SudokuGenerator(boardSize).generate(clueCount)
+        scope.launch {
+            // 主线程先决定难度，再切后台生成谜题，避免卡 UI 与连点堆积
+            val newDiff: String
+            val genBoardSize: Int
+            if (isKiller) {
+                val diffRoll = rng.nextInt(100)
+                newDiff = if (diffRoll < 25) "入门" else if (diffRoll < 75) "中等" else "困难"
+                killerDifficulty = newDiff
+                genBoardSize = 3
+            } else {
+                pickClueCount()
+                newDiff = difficulty
+                genBoardSize = boardSize
+            }
+            val newPuzzle = withContext(Dispatchers.Default) {
+                if (isKiller) SudokuGenerator(3).generateKiller(newDiff)
+                else SudokuGenerator(genBoardSize).generate(clueCount)
+            }
+            puzzle = newPuzzle
+            generating = false
+            isSolved = false
+            hasGivenUp = false
+            noteMode = false
+            gameOver = false
+            errors = 0
+            dirty = false
+            paused = false
+            seconds = 0
+            statusMsg = ""
+            lastScore = 0
+            undoStack.clear()
+            redoStack.clear()
+            undoDepth = 0
+            redoDepth = 0
+            errorCells = emptySet()
+            selectedRow = null
+            selectedCol = null
+            revision++
+            startTimer()
         }
-        generating = false
-        isSolved = false
-        hasGivenUp = false
-        noteMode = false
-        gameOver = false
-        errors = 0
-        dirty = false
-        paused = false
-        seconds = 0
-        statusMsg = ""
-        lastScore = 0
-        undoStack.clear()
-        redoStack.clear()
-        undoDepth = 0
-        redoDepth = 0
-        errorCells = emptySet()
-        selectedRow = null
-        selectedCol = null
-        revision++
-        startTimer()
     }
 
     fun togglePause() {
@@ -484,7 +498,8 @@ class GameController(val username: String) {
                 val indices = mutableListOf<Int>()
                 val idxArr = cMap.optJSONArray("cellIndices") ?: JSONArray()
                 for (j in 0 until idxArr.length()) indices.add(idxArr.optInt(j))
-                cages.add(Cage(indices, cMap.optInt("sum", 0)))
+                val op = cMap.optString("op", "+").firstOrNull() ?: '+'
+                cages.add(Cage(indices, cMap.optInt("sum", 0), op))
             }
             p.cages = cages
         }
@@ -557,7 +572,7 @@ class GameController(val username: String) {
     private suspend fun submitScore(won: Boolean): Int {
         val score = calculateScore()
         val mode = when {
-            isKiller -> "杀手$killerDifficulty"
+            isKiller -> "算数$killerDifficulty"
             boardSize == 4 -> "4×4$difficulty"
             else -> "3×3$difficulty"
         }

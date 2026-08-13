@@ -1,8 +1,13 @@
-﻿package com.example.sudoku.model
+package com.example.sudoku.model
 
-/** 杀手数独的虚线框（Cage） */
-class Cage(val cellIndices: List<Int>, val sum: Int) {
+import kotlin.math.abs
+
+/** 算数数独的笼子（Cage），op 为运算符：'+' 求和（默认）、'-' 求差、'×' 求积、'÷' 求商 */
+class Cage(val cellIndices: List<Int>, val sum: Int, val op: Char = '+') {
     fun contains(r: Int, c: Int, gridSize: Int): Boolean = cellIndices.contains(r * gridSize + c)
+
+    /** 笼子标签文本：运算符 + 结果，如 +10、-2、×100、÷3 */
+    fun labelText(): String = "$op$sum"
 }
 
 class SudokuPuzzle(val boardSize: Int = 3) {
@@ -39,7 +44,7 @@ class SudokuPuzzle(val boardSize: Int = 3) {
                 p.solution[r][c] = solution[r][c]
             }
         }
-        cages?.let { p.cages = it.map { cage -> Cage(cage.cellIndices.toList(), cage.sum) }.toMutableList() }
+        cages?.let { p.cages = it.map { cage -> Cage(cage.cellIndices.toList(), cage.sum, cage.op) }.toMutableList() }
         return p
     }
 
@@ -74,12 +79,7 @@ class SudokuPuzzle(val boardSize: Int = 3) {
             val idx = r * gridSize + c
             for (cage in cages) {
                 if (!cage.cellIndices.contains(idx)) continue
-                var sum = n
-                for (ci in cage.cellIndices) {
-                    if (ci == idx) continue
-                    sum += cells[ci / gridSize][ci % gridSize]
-                }
-                if (sum > cage.sum) return true
+                if (cageBrokenWith(cage, idx, n)) return true
             }
         }
         return false
@@ -104,16 +104,74 @@ class SudokuPuzzle(val boardSize: Int = 3) {
         return result
     }
 
-    /** 找出当前填数超过和值的笼子索引 */
+    /** 找出当前填数违反笼子约束的笼子索引 */
     fun invalidCages(): Set<Int> {
         val cages = cages ?: return emptySet()
         val result = mutableSetOf<Int>()
         for (i in cages.indices) {
-            var sum = 0
-            for (idx in cages[i].cellIndices) sum += cells[idx / gridSize][idx % gridSize]
-            if (sum > cages[i].sum) result.add(i)
+            if (cageBroken(cages[i])) result.add(i)
         }
         return result
+    }
+
+    /** 在 (r,c) 填入 n 后，笼子约束是否被违反（n 尚未写入 cells） */
+    private fun cageBrokenWith(cage: Cage, idx: Int, n: Int): Boolean {
+        val vals = cage.cellIndices.map { if (it == idx) n else cells[it / gridSize][it % gridSize] }
+        return when (cage.op) {
+            '-' -> vals.size == 2 && vals[0] != 0 && vals[1] != 0 && abs(vals[0] - vals[1]) != cage.sum
+            '÷' -> {
+                if (vals.size != 2 || vals[0] == 0 || vals[1] == 0) false
+                else {
+                    val a = maxOf(vals[0], vals[1])
+                    val b = minOf(vals[0], vals[1])
+                    a % b != 0 || a / b != cage.sum
+                }
+            }
+            '×' -> {
+                var prod = 1L
+                for (v in vals) {
+                    if (v == 0) return false
+                    prod *= v
+                    if (prod > cage.sum) return true
+                }
+                false
+            }
+            else -> {
+                var s = 0
+                for (v in vals) s += v
+                s > cage.sum
+            }
+        }
+    }
+
+    /** 根据当前填数判断笼子约束是否被违反（'+' 超和、'×' 超积、'-'/'÷' 填满后不符） */
+    private fun cageBroken(cage: Cage): Boolean {
+        val vals = cage.cellIndices.map { cells[it / gridSize][it % gridSize] }
+        return when (cage.op) {
+            '-' -> vals.size == 2 && vals[0] != 0 && vals[1] != 0 && abs(vals[0] - vals[1]) != cage.sum
+            '÷' -> {
+                if (vals.size != 2 || vals[0] == 0 || vals[1] == 0) false
+                else {
+                    val a = maxOf(vals[0], vals[1])
+                    val b = minOf(vals[0], vals[1])
+                    a % b != 0 || a / b != cage.sum
+                }
+            }
+            '×' -> {
+                var prod = 1L
+                for (v in vals) {
+                    if (v == 0) return false
+                    prod *= v
+                    if (prod > cage.sum) return true
+                }
+                false
+            }
+            else -> {
+                var s = 0
+                for (v in vals) s += v
+                s > cage.sum
+            }
+        }
     }
 
     /** 验证行/列/宫唯一性 */

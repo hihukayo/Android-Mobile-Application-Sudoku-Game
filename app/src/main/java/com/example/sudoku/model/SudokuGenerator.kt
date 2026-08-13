@@ -1,6 +1,7 @@
 package com.example.sudoku.model
 
 import kotlin.random.Random
+import kotlin.math.abs
 
 class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
     private val rng: Random = if (seed != null) kotlin.random.Random(seed) else Random
@@ -26,13 +27,13 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
     /** 难度对应的笼子大小概率 [2格, 3格, 4格, 5格] */
     private fun cageProbs(difficulty: String): List<Int> = when (difficulty) {
         "入门" -> listOf(60, 35, 5, 0)
-        "困难" -> listOf(30, 30, 20, 20)
-        else -> listOf(40, 35, 15, 10)
+        "困难" -> listOf(30, 30, 40, 0)
+        else -> listOf(40, 35, 25, 0)
     }
 
-    /** 生成杀手数独 */
+    /** 生成算数数独 */
     fun generateKiller(difficulty: String = "中等"): SudokuPuzzle {
-        require(boardSize == 3) { "杀手数独仅支持 3×3" }
+        require(boardSize == 3) { "算数数独仅支持 3×3" }
         val maxAttempts = 50
         repeat(maxAttempts) {
             val puzzle = SudokuPuzzle(boardSize)
@@ -78,9 +79,9 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
                 val cage = mutableListOf(i)
                 assigned[i] = cages.size
 
-                // 从笼子任意边界扩展（支持 L 型等异形）
+                // 从笼子任意边界扩展（加权随机：与笼子相邻边多的格子优先，形成俄罗斯方块式异形）
                 while (cage.size < size) {
-                    val candidates = mutableSetOf<Int>()
+                    val scores = mutableMapOf<Int, Int>()
                     for (idx in cage) {
                         val r = idx / gs
                         val c = idx % gs
@@ -89,14 +90,25 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
                             val nc = c + dc
                             if (nr < 0 || nr >= gs || nc < 0 || nc >= gs) continue
                             val nIdx = nr * gs + nc
-                            if (assigned[nIdx] == -1) candidates.add(nIdx)
+                            if (assigned[nIdx] == -1) scores[nIdx] = (scores[nIdx] ?: 0) + 1
                         }
                     }
-                    if (candidates.isEmpty()) {
+                    if (scores.isEmpty()) {
                         ok = false
                         break
                     }
-                    val chosen = candidates.elementAt(rng.nextInt(candidates.size))
+                    val entries = scores.entries.toList()
+                    val weights = entries.map { it.value * it.value }
+                    val total = weights.sum()
+                    var roll = rng.nextInt(total)
+                    var chosen = entries.last().key
+                    for (i in entries.indices) {
+                        roll -= weights[i]
+                        if (roll < 0) {
+                            chosen = entries[i].key
+                            break
+                        }
+                    }
                     cage.add(chosen)
                     assigned[chosen] = cages.size
                 }
@@ -106,11 +118,11 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
 
             // 检查全部格已分配
             if (ok && assigned.all { it != -1 }) {
-                // 计算和值写入 puzzle
+                // 为每个笼子挑选算数运算符并写入 puzzle
                 puzzle.cages = cages.map { c ->
-                    var sum = 0
-                    for (idx in c) sum += puzzle.solution[idx / gs][idx % gs]
-                    Cage(cellIndices = c.toList(), sum = sum)
+                    val values = c.map { puzzle.solution[it / gs][it % gs] }
+                    val chosen = pickCageOp(c, values)
+                    Cage(cellIndices = c.toList(), sum = chosen.second, op = chosen.first)
                 }.toMutableList()
                 return true
             }
@@ -130,27 +142,58 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
         for (attempt in 0 until 20) {
             val roll = rng.nextInt(100)
             var cum = 0
-            for (sz in 2..5) {
+            for (sz in 2..4) {
                 cum += probs[sz - 2]
                 if (roll < cum) {
                     if (remaining < sz) break
                     if (sz == 4 && count4 >= max4) continue
-                    if (sz == 5 && difficulty == "入门") continue
+
                     val rest = remaining - sz
                     if (rest == 0 || rest >= 2) return sz
                 }
             }
         }
         // fallback: 取能放下的最大尺寸
-        for (sz in listOf(5, 4, 3, 2)) {
+        for (sz in listOf(4, 3, 2)) {
             if (remaining >= sz) {
                 if (sz == 4 && count4 >= max4) continue
-                if (sz == 5 && difficulty == "入门") continue
                 val rest = remaining - sz
                 if (rest == 0 || rest >= 2) return sz
             }
         }
         return -1
+    }
+
+    /** 为笼子挑选算数运算符：2 格支持 + - × ÷，3/4 格只支持 + 或乘积较小的 × */
+    private fun pickCageOp(cage: List<Int>, values: List<Int>): Pair<Char, Int> {
+        val sum = values.sum()
+        val ops = mutableListOf<Pair<Char, Int>>()
+        val weights = mutableListOf<Int>()
+        fun add(op: Char, target: Int, weight: Int) {
+            ops.add(op to target)
+            weights.add(weight)
+        }
+        if (cage.size == 2) {
+            val a = maxOf(values[0], values[1])
+            val b = minOf(values[0], values[1])
+            val diff = a - b
+            val quotient = if (b > 0 && a % b == 0) a / b else -1
+            add('+', sum, 25)
+            if (quotient in 2..9) add('÷', quotient, 65)
+            if (diff >= 2) add('-', diff, 10)
+            add('×', a * b, 10)
+        } else {
+            val product = values.fold(1L) { acc, v -> acc * v }
+            add('+', sum, 90)
+            if (product <= 50) add('×', product.toInt(), 10)
+        }
+        val total = weights.sum()
+        var roll = rng.nextInt(total)
+        for (i in ops.indices) {
+            roll -= weights[i]
+            if (roll < 0) return ops[i]
+        }
+        return ops.last()
     }
 
     fun fillGrid(grid: Array<IntArray>): Boolean {

@@ -423,7 +423,7 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
             .padding(horizontal = 24.dp, vertical = 4.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
-            GameTextBtn("新局", onClick = { controller.newGame() })
+            GameTextBtn("新局", enabled = !controller.generating, onClick = { controller.newGame() })
             GameTextBtn(
                 "完成",
                 fill = true,
@@ -594,7 +594,7 @@ private fun HiddenNumberInput(
 @Composable
 private fun ModeMenuPopup(current: String, onSelect: (String) -> Unit, modifier: Modifier = Modifier) {
     val options = listOf(
-        "3×3-killer" to "3×3 杀手",
+        "3×3-killer" to "3×3 算数",
         "3×3" to "3×3 常规",
         "4×4" to "4×4 常规",
     )

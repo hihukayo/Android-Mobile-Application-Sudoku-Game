@@ -141,6 +141,7 @@ object ApiClient {
             for (i in cage.cellIndices) idx.put(i)
             cageJson.put("cellIndices", idx)
             cageJson.put("sum", cage.sum)
+            cageJson.put("op", cage.op.toString())
             cagesArr.put(cageJson)
         }
         return request("POST", "/save", JSONObject().apply {
