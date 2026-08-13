@@ -245,7 +245,7 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
             val saved = puzzle.cells[r][c]
             puzzle.cells[r][c] = 0
             if (boardSize == 3) {
-                if (countSolutions(puzzle.clone(), 2) != 1) {
+                if (countSolutions(puzzle, 2) != 1) {
                     puzzle.cells[r][c] = saved
                 } else {
                     target--
@@ -256,23 +256,67 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
         }
     }
 
+    /** 快速统计解的数量（MRV 最少候选优先 + 位掩码，达到 limit 即提前返回） */
     private fun countSolutions(puzzle: SudokuPuzzle, limit: Int): Int {
-        var count = 0
-        fun solve(grid: Array<IntArray>) {
-            if (count >= limit) return
-            val empty = findEmpty(grid) ?: run { count++; return }
-            val (r, c) = empty
-            for (n in 1..gridSize) {
-                if (isValid(grid, r, c, n)) {
-                    grid[r][c] = n
-                    solve(grid)
-                    grid[r][c] = 0
-                    if (count >= limit) return
+        val gs = gridSize
+        val b = boardSize
+        val grid = Array(gs) { r -> puzzle.cells[r].copyOf() }
+        val rowMask = IntArray(gs)
+        val colMask = IntArray(gs)
+        val boxMask = IntArray(gs)
+        for (r in 0 until gs) {
+            for (c in 0 until gs) {
+                val v = grid[r][c]
+                if (v != 0) {
+                    val bit = 1 shl (v - 1)
+                    rowMask[r] = rowMask[r] or bit
+                    colMask[c] = colMask[c] or bit
+                    boxMask[(r / b) * b + (c / b)] = boxMask[(r / b) * b + (c / b)] or bit
                 }
             }
         }
-        val grid = Array(gridSize) { r -> puzzle.cells[r].copyOf() }
-        solve(grid)
+        var count = 0
+        val full = (1 shl gs) - 1
+
+        fun solve() {
+            if (count >= limit) return
+            // MRV：选出候选数最少的空格（局部变量，避免递归相互覆盖）
+            var br = -1
+            var bc = -1
+            var bCand = 0
+            var best = 10
+            for (r in 0 until gs) {
+                for (c in 0 until gs) {
+                    if (grid[r][c] != 0) continue
+                    val used = rowMask[r] or colMask[c] or boxMask[(r / b) * b + (c / b)]
+                    val cand = full and used.inv()
+                    val n = cand.countOneBits()
+                    if (n < best) {
+                        best = n; br = r; bc = c; bCand = cand
+                        if (n <= 1) break // 唯一候选或死路
+                    }
+                }
+                if (best <= 1) break
+            }
+            if (br < 0) { count++; return }
+            var cand = bCand
+            val boxIdx = (br / b) * b + (bc / b)
+            while (cand != 0) {
+                val bit = cand and -cand
+                cand = cand xor bit
+                grid[br][bc] = Integer.numberOfTrailingZeros(bit) + 1
+                rowMask[br] = rowMask[br] or bit
+                colMask[bc] = colMask[bc] or bit
+                boxMask[boxIdx] = boxMask[boxIdx] or bit
+                solve()
+                rowMask[br] = rowMask[br] xor bit
+                colMask[bc] = colMask[bc] xor bit
+                boxMask[boxIdx] = boxMask[boxIdx] xor bit
+                grid[br][bc] = 0
+                if (count >= limit) return
+            }
+        }
+        solve()
         return count
     }
 }

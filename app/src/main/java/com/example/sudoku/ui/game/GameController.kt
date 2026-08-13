@@ -261,7 +261,12 @@ class GameController(val username: String) {
         puzzle.cells[r][c] = n
         puzzle.notes[r][c].clear()
         val isError = if (isKiller) puzzle.isConflictAt(r, c, n) else n != puzzle.solution[r][c]
-        errorCells = if (isError) errorCells + "$r,$c" else errorCells - "$r,$c"
+        errorCells = if (isError) {
+            // 违反笼子约束：整个笼子的格子一起标红
+            if (isKiller) puzzle.conflictCells() else errorCells + "$r,$c"
+        } else {
+            errorCells - "$r,$c"
+        }
         revision++
         pushUndo(UndoEntry(r, c, old, oldNotes, n, emptySet()))
         SoundManager.placement()

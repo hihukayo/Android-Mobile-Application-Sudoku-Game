@@ -1,7 +1,6 @@
 package com.example.sudoku.ui.game
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Box
@@ -14,11 +13,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.AnnotatedString
@@ -60,8 +61,7 @@ fun SudokuBoard(
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
-            .border(2.5.dp, DarkSlate, RoundedCornerShape(10.dp)),
+            .clip(RoundedCornerShape(10.dp)),
     ) {
         key(revision) {
             Canvas(
@@ -133,7 +133,7 @@ fun SudokuBoard(
                     }
                 }
             }
-            // 网格线（仅内部线条，外圈由圆角边框承担；杀手模式内部统一浅灰细线）
+            // 网格线（仅内部线条，外圈由下方统一圆角边框承担；杀手模式内部统一浅灰细线）
             val thin = 0.5.dp.toPx()
             val thick = 2.dp.toPx()
             for (i in 1 until gs) {
@@ -145,6 +145,15 @@ fun SudokuBoard(
                 drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = stroke)
                 drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke)
             }
+            // 棋盘外圈边框（深色圆角，所有模式统一；错误笼子贴边时对应线段在笼子层最后标红）
+            val outerW = 2.5.dp.toPx()
+            drawRoundRect(
+                color = DarkSlate,
+                topLeft = Offset(outerW / 2, outerW / 2),
+                size = Size(size.width - outerW, size.height - outerW),
+                cornerRadius = CornerRadius(10.dp.toPx()),
+                style = Stroke(width = outerW),
+            )
             // 杀手笼子覆盖层
             if (puzzle.isKiller) {
                 drawCages(puzzle, cell, textMeasurer)
@@ -158,31 +167,42 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
     val gs = puzzle.gridSize
     val cages = puzzle.cages ?: return
     val invalid = puzzle.invalidCages()
-    for (ci in cages.indices) {
-        val isBad = invalid.contains(ci)
-        // 与宫分隔线一致：深色粗线直接沿格子边界绘制；无效笼子标红
-        val color = if (isBad) Red else DarkSlate
-        val stroke = if (isBad) 1.2.dp.toPx() else 2.dp.toPx()
-        val cells = cages[ci].cellIndices.toSet()
-        for (idx in cells) {
-            val r = idx / gs
-            val c = idx % gs
-            val x = c * cell
-            val y = r * cell
-            // 深色线直接覆盖网格细线，转角方正、颜色统一
-            if (r > 0 && !cells.contains((r - 1) * gs + c)) {
-                drawLine(color, Offset(x, y), Offset(x + cell, y), stroke)
-            }
-            if (r < gs - 1 && !cells.contains((r + 1) * gs + c)) {
-                drawLine(color, Offset(x, y + cell), Offset(x + cell, y + cell), stroke)
-            }
-            if (c > 0 && !cells.contains(r * gs + (c - 1))) {
-                drawLine(color, Offset(x, y), Offset(x, y + cell), stroke)
-            }
-            if (c < gs - 1 && !cells.contains(r * gs + (c + 1))) {
-                drawLine(color, Offset(x + cell, y), Offset(x + cell, y + cell), stroke)
+    // 先画正常笼子，再画错误笼子（红色最后绘制，确保整圈边框完整变红，不被相邻笼子覆盖）
+    for (isBad in listOf(false, true)) {
+        for (ci in cages.indices) {
+            if (invalid.contains(ci) != isBad) continue
+            val color = if (isBad) Red else DarkSlate
+            val stroke = 2.dp.toPx()
+            val cells = cages[ci].cellIndices.toSet()
+            for (idx in cells) {
+                val r = idx / gs
+                val c = idx % gs
+                val x = c * cell
+                val y = r * cell
+                if (r > 0 && !cells.contains((r - 1) * gs + c)) {
+                    drawLine(color, Offset(x, y), Offset(x + cell, y), stroke)
+                }
+                if (r < gs - 1 && !cells.contains((r + 1) * gs + c)) {
+                    drawLine(color, Offset(x, y + cell), Offset(x + cell, y + cell), stroke)
+                }
+                if (c > 0 && !cells.contains(r * gs + (c - 1))) {
+                    drawLine(color, Offset(x, y), Offset(x, y + cell), stroke)
+                }
+                if (c < gs - 1 && !cells.contains(r * gs + (c + 1))) {
+                    drawLine(color, Offset(x + cell, y), Offset(x + cell, y + cell), stroke)
+                }
+                // 错误笼子贴棋盘外圈：外圈边框对应线段也标红（2.5dp 与外圈一致）
+                if (isBad) {
+                    val outer = 2.5.dp.toPx()
+                    if (r == 0) drawLine(color, Offset(x, y), Offset(x + cell, y), outer)
+                    if (r == gs - 1) drawLine(color, Offset(x, y + cell), Offset(x + cell, y + cell), outer)
+                    if (c == 0) drawLine(color, Offset(x, y), Offset(x, y + cell), outer)
+                    if (c == gs - 1) drawLine(color, Offset(x + cell, y), Offset(x + cell, y + cell), outer)
+                }
             }
         }
+    }
+    for (ci in cages.indices) {
         // 笼子标签：每个笼子显示 运算符+结果（如 +10、-2、×100、÷3）
         var botR = -1
         var botC = -1
