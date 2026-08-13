@@ -95,6 +95,8 @@ class GameController(val username: String) {
         private set
     private var timerJob: Job? = null
     private var statusJob: Job? = null
+    /** 新局生成代次：恢复存档时递增，使进行中的生成失效，避免覆盖恢复的棋盘与计时 */
+    private var gameGen = 0
 
     val maxErrors: Int get() = if (boardSize == 3) 3 else 6
 
@@ -173,6 +175,7 @@ class GameController(val username: String) {
             SoundManager.click()
         }
         generating = true
+        val gen = ++gameGen
         scope.launch {
             // 主线程先决定难度，再切后台生成谜题，避免卡 UI 与连点堆积
             val newDiff: String
@@ -190,6 +193,11 @@ class GameController(val username: String) {
             val newPuzzle = withContext(Dispatchers.Default) {
                 if (isKiller) SudokuGenerator(3).generateKiller(newDiff)
                 else SudokuGenerator(genBoardSize).generate(clueCount)
+            }
+            // 生成期间若已恢复存档，放弃本次新局，避免覆盖恢复的棋盘与计时
+            if (gen != gameGen) {
+                generating = false
+                return@launch
             }
             puzzle = newPuzzle
             generating = false
@@ -219,6 +227,7 @@ class GameController(val username: String) {
         SoundManager.click()
         val becoming = !paused
         paused = becoming
+        // 暂停时仅当玩过（动过棋盘）才自动存档，未玩过不覆盖旧存档；内容与手动存档一致（含计时）
         if (becoming && !gameOver && !isSolved && dirty) saveGame(silent = true)
     }
 
@@ -451,6 +460,11 @@ class GameController(val username: String) {
         }
     }
 
+    /** 等待在途的自动存档完成，避免读档拿到旧数据 */
+    suspend fun awaitPendingSave() {
+        while (saving) delay(100)
+    }
+
     fun autoSave() {
         if (!dirty) return
         if (!gameOver && !isSolved && seconds > 3) saveGame(silent = true)
@@ -463,6 +477,7 @@ class GameController(val username: String) {
     }
 
     fun restoreFromData(res: JSONObject) {
+        gameGen++ // 使进行中的新局生成失效，防止其覆盖恢复的棋盘与计时
         val boardSize = res.optInt("boardSize", 3)
         val isKiller = res.optBoolean("isKiller")
         val cellsRaw = res.optJSONArray("cells") ?: JSONArray()

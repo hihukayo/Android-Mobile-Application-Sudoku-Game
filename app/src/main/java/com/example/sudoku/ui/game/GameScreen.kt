@@ -85,6 +85,7 @@ fun GameScreen(controller: GameController) {
         if (controller.resumeChecked) return@LaunchedEffect
         controller.resumeChecked = true
         controller.newGame()
+        controller.awaitPendingSave()
         val res = controller.fetchSave()
         if (res != null && res.optBoolean("success")) {
             pendingResume = res
@@ -268,6 +269,7 @@ fun GameScreen(controller: GameController) {
                     controller.loadingSave = true
                     controller.showStatus("正在加载...")
                     scope.launch {
+                        controller.awaitPendingSave()
                         val res = controller.fetchSave()
                         controller.loadingSave = false
                         if (res != null && res.optBoolean("success")) {
