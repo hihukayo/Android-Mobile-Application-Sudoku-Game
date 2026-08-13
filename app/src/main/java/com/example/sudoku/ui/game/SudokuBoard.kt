@@ -158,10 +158,6 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
     val gs = puzzle.gridSize
     val cages = puzzle.cages ?: return
     val invalid = puzzle.invalidCages()
-    val cellCage = IntArray(gs * gs) { -1 }
-    for (i in cages.indices) {
-        for (idx in cages[i].cellIndices) cellCage[idx] = i
-    }
     for (ci in cages.indices) {
         val isBad = invalid.contains(ci)
         // 与宫分隔线一致：深色粗线直接沿格子边界绘制；无效笼子标红
@@ -188,7 +184,6 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
             }
         }
         // 笼子标签：每个笼子显示 运算符+结果（如 +10、-2、×100、÷3）
-        val isBottomRightCage = ci == cellCage[gs * gs - 1]
         var botR = -1
         var botC = -1
         for (idx in cages[ci].cellIndices) {
@@ -202,8 +197,8 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
         val sumStyle = TextStyle(fontSize = 8.sp, fontWeight = FontWeight.Bold, color = DarkSlate)
         val label = cages[ci].labelText()
         val layout = textMeasurer.measure(AnnotatedString(label), style = sumStyle)
-        // 除右下角笼子外，标签可更贴近格子右边缘；右下角笼子保留内缩避免与圆角边线重叠
-        val rightMargin = if (isBottomRightCage) 6.dp.toPx() else 2.dp.toPx()
+        // 所有笼子标签统一向右内缩，避免与棋盘右边框及圆角边线重叠
+        val rightMargin = 5.dp.toPx()
         val sx = botC * cell + cell - rightMargin - layout.size.width
         val sy = botR * cell + cell - 12.dp.toPx()
         drawText(layout, topLeft = Offset(sx, sy))
