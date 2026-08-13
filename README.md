@@ -19,6 +19,7 @@
 - **云端存档**：手动保存 / 加载，暂停自动保存，未游玩的新盘不会覆盖旧存档
 - **排行榜**：提交积分、总榜、个人统计（总局数 / 积分 / 胜率），积分公式与 Flutter 版一致
 - **音效与反馈**：SoundPool 音效 + 震动反馈
+- **深色模式**：设置中可切换 跟随系统 / 浅色 / 深色 并持久化保存；全界面语义色适配，深色下棋盘、笔记、按钮均做可读性优化
 
 ## 技术栈
 
@@ -26,6 +27,7 @@
 - AGP 9.2.1，compileSdk 36 / targetSdk 35 / minSdk 24
 - 无第三方导航 / 网络 / 图标库：状态栈导航、`HttpURLConnection`、`SharedPreferences`、自绘 `ImageVector` 图标
 - 棋盘用 Compose Canvas 绘制（含算数数独笼子）
+- 语义色体系（`SudokuColors`）：亮 / 暗两套配色，支持跟随系统与手动切换（设置 → 深色模式）
 
 ## 项目结构
 
@@ -42,7 +44,7 @@ app/src/main/java/com/example/sudoku/
     ├── LoginScreen.kt / RegisterScreen.kt
     ├── ProfileScreen.kt / SettingsScreen.kt / RankScreen.kt
     ├── AppIcons.kt        # 自绘 ImageVector 图标
-    └── Theme.kt           # 配色与 Material3 主题
+    └── Theme.kt           # 亮/暗语义色与 Material3 主题
 ```
 
 ## 构建与安装
