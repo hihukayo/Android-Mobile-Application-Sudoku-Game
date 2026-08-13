@@ -530,7 +530,8 @@ class GameController(val username: String) {
         hasGivenUp = false
         gameOver = errors >= (if (boardSize == 3) 3 else 6)
         paused = false
-        dirty = false
+        // 读档恢复的进度视为可存档：暂停/退出自动保存（含计时），无需再动棋盘
+        dirty = true
         undoStack.clear()
         redoStack.clear()
         undoDepth = 0
