@@ -477,7 +477,6 @@ private fun GameTextBtn(
 ) {
     val sc = LocalSudokuColors.current
     val bg = when {
-        !enabled -> sc.chipBg
         fill -> sc.primary
         else -> Color.Transparent
     }
