@@ -1,6 +1,7 @@
 package com.example.sudoku.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -76,7 +77,12 @@ private fun SplashScreen(onDone: (Screen) -> Unit) {
         val p = Session.phone
         onDone(if (u != null && p != null) Screen.Home(u, p) else Screen.Login())
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(LocalSudokuColors.current.background),
+        contentAlignment = Alignment.Center,
+    ) {
         CircularProgressIndicator()
     }
 }

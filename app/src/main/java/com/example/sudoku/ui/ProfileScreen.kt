@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -226,15 +228,21 @@ fun ProfileScreen(
         Spacer(Modifier.height(32.dp))
 
         // 退出登录
-        OutlinedButton(
+        Button(
             onClick = onLogout,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = sc.danger,
+                contentColor = sc.onPrimary,
+            ),
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
         ) {
-            Icon(AppIcons.Logout, contentDescription = null, tint = Color(0xFFEF5350), modifier = Modifier.size(18.dp))
+            Icon(AppIcons.Logout, contentDescription = null, tint = sc.onPrimary, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("退出登录", fontSize = 15.sp, color = Color(0xFFEF5350))
+            Text("退出登录", fontSize = 15.sp, color = sc.onPrimary)
         }
     }
 }

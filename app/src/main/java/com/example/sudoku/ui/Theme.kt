@@ -42,6 +42,7 @@ data class SudokuColors(
     val noteText: Color,        // 笔记/浅蓝强调（暗色下用亮蓝）
     val primary: Color,         // 主按钮底色（暗色下柔和蓝）
     val onPrimary: Color,       // 主按钮文字（暗色下柔和近白）
+    val danger: Color,          // 危险操作按钮（暗色下柔和红）
 )
 
 private val LightSudokuColors = SudokuColors(
@@ -63,6 +64,7 @@ private val LightSudokuColors = SudokuColors(
     noteText = Blue,
     primary = Blue,
     onPrimary = Color.White,
+    danger = Color(0xFFEF5350),
 )
 
 private val DarkSudokuColors = SudokuColors(
@@ -84,6 +86,7 @@ private val DarkSudokuColors = SudokuColors(
     noteText = Color(0xFF9CBDF0),
     primary = Color(0xFF2B46B8),
     onPrimary = Color(0xFFE8EAF0),
+    danger = Color(0xFFC96262),
 )
 
 val LocalSudokuColors = staticCompositionLocalOf { LightSudokuColors }
