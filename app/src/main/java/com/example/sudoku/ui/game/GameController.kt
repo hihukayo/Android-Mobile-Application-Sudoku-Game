@@ -228,7 +228,7 @@ class GameController(val username: String) {
         val becoming = !paused
         paused = becoming
         // 暂停时仅当玩过（动过棋盘）才自动存档，未玩过不覆盖旧存档；内容与手动存档一致（含计时）
-        if (becoming && !gameOver && !isSolved && dirty) saveGame(silent = true)
+        if (becoming && !gameOver && !isSolved && dirty) saveGame(successMsg = "已自动保存", failMsg = "自动保存失败")
     }
 
     fun selectCell(r: Int, c: Int) {
@@ -432,7 +432,7 @@ class GameController(val username: String) {
     }
 
     // ---- 存档 ----
-    fun saveGame(silent: Boolean = false) {
+    fun saveGame(silent: Boolean = false, successMsg: String = "存档成功", failMsg: String = "存档失败，请检查网络连接后重试") {
         if (saving) return
         saving = true
         if (!silent) showStatus("正在保存...")
@@ -451,9 +451,9 @@ class GameController(val username: String) {
                     killerDifficulty = killerDifficulty,
                     cages = puzzle.cages,
                 )
-                if (!silent) showStatus("存档成功")
+                if (!silent) showStatus(successMsg)
             } catch (_: Exception) {
-                if (!silent) showStatus("存档失败，请检查网络连接后重试")
+                if (!silent) showStatus(failMsg)
             } finally {
                 saving = false
             }
@@ -612,7 +612,7 @@ class GameController(val username: String) {
         statusMsg = msg
         statusJob?.cancel()
         statusJob = scope.launch {
-            delay(2000)
+            delay(4000)
             statusMsg = ""
         }
     }

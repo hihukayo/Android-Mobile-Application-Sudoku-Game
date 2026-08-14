@@ -196,18 +196,68 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
         return ops.last()
     }
 
+    /** 填充完整解：MRV（最少候选优先）+ 位掩码，16×16 也能快速生成 */
     fun fillGrid(grid: Array<IntArray>): Boolean {
-        val empty = findEmpty(grid) ?: return true
-        val (r, c) = empty
-        val nums = (1..gridSize).toMutableList().apply { shuffle(rng) }
-        for (n in nums) {
-            if (isValid(grid, r, c, n)) {
-                grid[r][c] = n
-                if (fillGrid(grid)) return true
-                grid[r][c] = 0
+        val gs = gridSize
+        val b = boardSize
+        val rowMask = IntArray(gs)
+        val colMask = IntArray(gs)
+        val boxMask = IntArray(gs)
+        for (r in 0 until gs) {
+            for (c in 0 until gs) {
+                val v = grid[r][c]
+                if (v != 0) {
+                    val bit = 1 shl (v - 1)
+                    rowMask[r] = rowMask[r] or bit
+                    colMask[c] = colMask[c] or bit
+                    boxMask[(r / b) * b + (c / b)] = boxMask[(r / b) * b + (c / b)] or bit
+                }
             }
         }
-        return false
+        val full = (1 shl gs) - 1
+
+        fun solve(): Boolean {
+            var br = -1
+            var bc = -1
+            var bCand = 0
+            var best = gs + 1
+            for (r in 0 until gs) {
+                for (c in 0 until gs) {
+                    if (grid[r][c] != 0) continue
+                    val used = rowMask[r] or colMask[c] or boxMask[(r / b) * b + (c / b)]
+                    val cand = full and used.inv()
+                    val n = cand.countOneBits()
+                    if (n < best) {
+                        best = n; br = r; bc = c; bCand = cand
+                        if (n <= 1) break
+                    }
+                }
+                if (best <= 1) break
+            }
+            if (br < 0) return true
+            val boxIdx = (br / b) * b + (bc / b)
+            val bits = mutableListOf<Int>()
+            var cand = bCand
+            while (cand != 0) {
+                val bit = cand and -cand
+                bits.add(bit)
+                cand = cand xor bit
+            }
+            bits.shuffle(rng) // 随机尝试顺序，保证每次谜题不同
+            for (bit in bits) {
+                grid[br][bc] = Integer.numberOfTrailingZeros(bit) + 1
+                rowMask[br] = rowMask[br] or bit
+                colMask[bc] = colMask[bc] or bit
+                boxMask[boxIdx] = boxMask[boxIdx] or bit
+                if (solve()) return true
+                rowMask[br] = rowMask[br] xor bit
+                colMask[bc] = colMask[bc] xor bit
+                boxMask[boxIdx] = boxMask[boxIdx] xor bit
+                grid[br][bc] = 0
+            }
+            return false
+        }
+        return solve()
     }
 
     private fun isValid(grid: Array<IntArray>, r: Int, c: Int, n: Int): Boolean {

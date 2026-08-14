@@ -398,8 +398,8 @@ private fun StatusText(controller: GameController) {
         controller.isSolved -> "解答正确！用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to sc.userInput
         controller.hasGivenUp -> "已查看答案" to Color(0xFFFF9800)
         controller.gameOver -> "错误 ${controller.errors} 次，游戏结束，用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to Red
-        controller.paused -> "已暂停" to sc.textSecondary
         controller.statusMsg.isNotEmpty() -> controller.statusMsg to sc.textSecondary
+        controller.paused -> "已暂停" to sc.textSecondary
         else -> "" to sc.textSecondary
     }
     if (text.isNotEmpty()) {
