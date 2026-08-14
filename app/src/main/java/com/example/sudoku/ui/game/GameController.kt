@@ -290,7 +290,6 @@ class GameController(val username: String) {
             if (errors >= maxErrors) {
                 stopTimer()
                 SoundManager.failed()
-                scope.launch { submitScore(won = false) }
                 lastScore = calculateScore()
                 paused = true
                 gameOver = true

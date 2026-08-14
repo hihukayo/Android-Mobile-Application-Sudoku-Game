@@ -178,6 +178,9 @@ object ApiClient {
 
     suspend fun getRankList(): JSONObject = request("GET", "/rank/list")
 
+    suspend fun getContributions(username: String, days: Int = 91): JSONObject =
+        request("GET", "/rank/contributions?username=${java.net.URLEncoder.encode(username, "UTF-8")}&days=$days")
+
     suspend fun getUserStats(username: String): JSONObject =
         request("GET", "/rank/user?username=${java.net.URLEncoder.encode(username, "UTF-8")}")
 
