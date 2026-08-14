@@ -1,10 +1,14 @@
-package com.example.sudoku.data
+﻿package com.example.sudoku.data
 
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
 
 object Session {
+    /** 进程内是否已自动检查过存档（仅首次进入主页时弹一次续玩提示） */
+    @Volatile
+    var autoResumeChecked = false
+
     private const val PREFS = "sudoku_session"
     private lateinit var prefs: SharedPreferences
 

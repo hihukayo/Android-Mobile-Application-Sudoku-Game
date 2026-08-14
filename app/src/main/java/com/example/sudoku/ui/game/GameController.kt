@@ -36,6 +36,9 @@ class GameController(val username: String) {
     /** 会话内只提示一次续玩 */
     var resumeChecked = false
 
+    /** 控制器是否已自动开过一局（重建后补一局，避免空棋盘） */
+    private var autoStarted = false
+
     /** 存档/读档进行中，防止重复请求 */
     var saving by mutableStateOf(false)
     var loadingSave by mutableStateOf(false)
@@ -171,15 +174,26 @@ class GameController(val username: String) {
         clueCount = clues
     }
 
-    fun newGame(silent: Boolean = false) {
+    /** 首次检查存档后若控制器被重建，自动补开一局，避免显示空棋盘 */
+    fun ensureStarted() {
+        if (autoStarted || generating) return
+        autoStarted = true
+        newGame(silent = true, feedback = false)
+    }
+
+    fun newGame(silent: Boolean = false, feedback: Boolean = true) {
         if (generating) return
-        if (silent) {
-            SoundManager.tap()
-            SoundManager.vibrate()
-        } else {
-            if (!SoundManager.debounce()) return
-            SoundManager.click()
+        if (feedback) {
+            if (silent) {
+                SoundManager.tap()
+                SoundManager.vibrate()
+            } else {
+                if (!SoundManager.debounce()) return
+                SoundManager.click()
+            }
         }
+        // 有生成在途时也重新开始：废弃在途生成，保证模式/难度切换后棋盘一定按新模式刷新
+        gameGen++
         generating = true
         val gen = ++gameGen
         scope.launch {
@@ -201,10 +215,7 @@ class GameController(val username: String) {
                 else SudokuGenerator(genBoardSize).generate(clueCount)
             }
             // 生成期间若已恢复存档，放弃本次新局，避免覆盖恢复的棋盘与计时
-            if (gen != gameGen) {
-                generating = false
-                return@launch
-            }
+            if (gen != gameGen) return@launch
             puzzle = newPuzzle
             generating = false
             isSolved = false

@@ -1,5 +1,11 @@
-package com.example.sudoku.ui.game
+﻿package com.example.sudoku.ui.game
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +69,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.sudoku.data.Session
 import com.example.sudoku.ui.AppIcons
 import com.example.sudoku.ui.Blue
 import com.example.sudoku.ui.LocalSudokuColors
@@ -84,6 +91,12 @@ fun GameScreen(controller: GameController) {
 
     // 进入游戏页时检查存档，提示续玩
     LaunchedEffect(Unit) {
+        if (Session.autoResumeChecked) {
+            // 控制器若被重建（如进设置返回），补开一局避免空棋盘
+            controller.ensureStarted()
+            return@LaunchedEffect
+        }
+        Session.autoResumeChecked = true
         if (controller.resumeChecked) return@LaunchedEffect
         controller.resumeChecked = true
         controller.newGame()
@@ -238,24 +251,40 @@ fun GameScreen(controller: GameController) {
         ) {
             val side = minOf(maxWidth, (maxHeight - 26.dp).coerceAtLeast(1.dp))
             Column(Modifier.fillMaxSize()) {
-                SudokuBoard(
-                    puzzle = controller.puzzle,
-                    readOnly = controller.paused || controller.gameOver,
-                    selectedRow = controller.selectedRow,
-                    selectedCol = controller.selectedCol,
-                    errorCells = controller.errorCells,
-                    revision = controller.revision,
-                    onCellTap = { r, c ->
-                        controller.selectCell(r, c)
-                        if (!controller.paused && !controller.gameOver) {
-                            focusTick++
-                            keyboard?.show()
-                        }
+                AnimatedContent(
+                    targetState = controller.boardSize to controller.isKiller,
+                    transitionSpec = {
+                        // 模式切换：旧棋盘淡出，新棋盘淡入并轻微放大，过渡更丝滑
+                        (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f, animationSpec = tween(220)))
+                            .togetherWith(fadeOut(tween(120)))
                     },
-                    modifier = Modifier
-                        .size(side)
-                        .align(Alignment.CenterHorizontally),
-                )
+                    label = "boardMode",
+                ) { mode ->
+                    val (boardSizeKey, killerKey) = mode
+                    // 快照当前棋盘，动画期间旧棋盘保持旧内容，避免两边同时显示新棋盘
+                    var snapshotPuzzle by remember(boardSizeKey, killerKey) { mutableStateOf(controller.puzzle) }
+                    LaunchedEffect(controller.revision) {
+                        snapshotPuzzle = controller.puzzle
+                    }
+                    SudokuBoard(
+                        puzzle = snapshotPuzzle,
+                        readOnly = controller.paused || controller.gameOver,
+                        selectedRow = controller.selectedRow,
+                        selectedCol = controller.selectedCol,
+                        errorCells = controller.errorCells,
+                        revision = controller.revision,
+                        onCellTap = { r, c ->
+                            controller.selectCell(r, c)
+                            if (!controller.paused && !controller.gameOver) {
+                                focusTick++
+                                keyboard?.show()
+                            }
+                        },
+                        modifier = Modifier
+                            .size(side)
+                            .align(Alignment.CenterHorizontally),
+                    )
+                }
                 Spacer(Modifier.height(4.dp))
                 StatusText(controller)
             }

@@ -1,5 +1,12 @@
-package com.example.sudoku.ui
+﻿package com.example.sudoku.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -80,16 +87,33 @@ fun HomeScreen(
         // 与 Flutter 版一致：整体限制最大宽度 480dp 居中
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             Box(Modifier.widthIn(max = 480.dp).fillMaxSize()) {
-                when (selectedTab) {
-                    0 -> GameScreen(gameController)
-                    1 -> RankScreen(username = username, refreshTick = rankTick)
-                    else -> ProfileScreen(
-                        username = username,
-                        phone = phone,
-                        refreshTick = profileTick,
-                        onOpenSettings = onOpenSettings,
-                        onLogout = onSessionEnd,
-                    )
+                AnimatedContent(
+                    targetState = selectedTab,
+                    modifier = Modifier.fillMaxSize().background(sc.background),
+                    transitionSpec = {
+                        // 翻页式左右滑动：tab 向右点时新页从右往左滑入，向左点则相反（纯滑动最流畅）
+                        val duration = 200
+                        if (targetState > initialState) {
+                            (slideInHorizontally(tween(duration, easing = FastOutSlowInEasing)) { it })
+                                .togetherWith(slideOutHorizontally(tween(duration, easing = FastOutSlowInEasing)) { -it })
+                        } else {
+                            (slideInHorizontally(tween(duration, easing = FastOutSlowInEasing)) { -it })
+                                .togetherWith(slideOutHorizontally(tween(duration, easing = FastOutSlowInEasing)) { it })
+                        }
+                    },
+                    label = "tabTransition",
+                ) { tab ->
+                    when (tab) {
+                        0 -> GameScreen(gameController)
+                        1 -> RankScreen(username = username, refreshTick = rankTick)
+                        else -> ProfileScreen(
+                            username = username,
+                            phone = phone,
+                            refreshTick = profileTick,
+                            onOpenSettings = onOpenSettings,
+                            onLogout = onSessionEnd,
+                        )
+                    }
                 }
             }
         }
