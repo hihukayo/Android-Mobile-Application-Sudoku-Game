@@ -23,6 +23,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -283,6 +284,22 @@ fun GameScreen(controller: GameController) {
         )
         }
 
+        // ---- 新局生成中显示加载遮罩，避免 4×4（16×16）生成时看起来像卡死 ----
+        if (controller.generating) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(sc.surface.copy(alpha = 0.55f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {},
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = sc.primary)
+            }
+        }
+
         // ---- 模式下拉菜单（紧贴顶部分割线下方）----
         if (showModeMenu) {
             Box(
@@ -397,7 +414,7 @@ private fun StatusText(controller: GameController) {
     val (text, color) = when {
         controller.isSolved -> "解答正确！用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to sc.userInput
         controller.hasGivenUp -> "已查看答案" to Color(0xFFFF9800)
-        controller.gameOver -> "错误 ${controller.errors} 次，游戏结束，用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to Red
+        controller.gameOver -> "游戏结束，用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to Red
         controller.statusMsg.isNotEmpty() -> controller.statusMsg to sc.textSecondary
         controller.paused -> "已暂停" to sc.textSecondary
         else -> "" to sc.textSecondary
