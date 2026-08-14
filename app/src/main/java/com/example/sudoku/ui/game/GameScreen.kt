@@ -525,10 +525,12 @@ private fun GameTextBtn(
 ) {
     val sc = LocalSudokuColors.current
     val bg = when {
+        fill && !enabled -> sc.primary.copy(alpha = 0.38f)
         fill -> sc.primary
         else -> Color.Transparent
     }
     val fg = when {
+        fill && !enabled -> sc.onPrimary.copy(alpha = 0.72f)
         !enabled -> sc.disabledText
         fill -> sc.onPrimary
         else -> sc.textSecondary
