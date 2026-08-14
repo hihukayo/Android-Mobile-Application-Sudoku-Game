@@ -640,9 +640,10 @@ class GameController(val username: String) {
     }
 
     fun formatTime(s: Int): String {
-        val m = s / 60
+        val h = s / 3600
+        val m = (s % 3600) / 60
         val sec = s % 60
-        return "%02d:%02d".format(m, sec)
+        return "%02d:%02d:%02d".format(h, m, sec)
     }
 
     fun cluesRemaining(): Int {
