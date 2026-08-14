@@ -40,6 +40,12 @@ class GameController(val username: String) {
     var saving by mutableStateOf(false)
     var loadingSave by mutableStateOf(false)
 
+    /** 存档在途时又点了存档：记录参数，完成后自动补存一次，避免按键无反应 */
+    private var saveAgain = false
+    private var saveAgainSilent = false
+    private var saveAgainSuccess = "存档成功"
+    private var saveAgainFail = "存档失败，请检查网络连接后重试"
+
     /** 棋盘是否被玩家动过（防止新盘无意覆盖旧存档） */
     var dirty by mutableStateOf(false)
         private set
@@ -227,8 +233,8 @@ class GameController(val username: String) {
         SoundManager.click()
         val becoming = !paused
         paused = becoming
-        // 暂停时仅当玩过（动过棋盘）才自动存档，未玩过不覆盖旧存档；内容与手动存档一致（含计时）
-        if (becoming && !gameOver && !isSolved && dirty) saveGame(successMsg = "已自动保存", failMsg = "自动保存失败")
+        // 暂停时仅当玩过（动过棋盘）才静默自动存档，未玩过不覆盖旧存档；内容与手动存档一致（含计时）
+        if (becoming && !gameOver && !isSolved && dirty) saveGame(silent = true)
     }
 
     fun selectCell(r: Int, c: Int) {
@@ -288,7 +294,6 @@ class GameController(val username: String) {
                 lastScore = calculateScore()
                 paused = true
                 gameOver = true
-                statusMsg = "错误 $errors 次，获得 $lastScore 积分"
                 return
             }
         }
@@ -383,6 +388,8 @@ class GameController(val username: String) {
         hasGivenUp = false
         errorCells = emptySet()
         seconds = 0
+        statusJob?.cancel()
+        statusMsg = ""
         revision++
         startTimer()
     }
@@ -433,7 +440,14 @@ class GameController(val username: String) {
 
     // ---- 存档 ----
     fun saveGame(silent: Boolean = false, successMsg: String = "存档成功", failMsg: String = "存档失败，请检查网络连接后重试") {
-        if (saving) return
+        if (saving) {
+            // 已有存档请求在途：记录本次存档参数，完成后自动补存
+            saveAgain = true
+            saveAgainSilent = silent
+            saveAgainSuccess = successMsg
+            saveAgainFail = failMsg
+            return
+        }
         saving = true
         if (!silent) showStatus("正在保存...")
         scope.launch {
@@ -456,6 +470,10 @@ class GameController(val username: String) {
                 if (!silent) showStatus(failMsg)
             } finally {
                 saving = false
+                if (saveAgain) {
+                    saveAgain = false
+                    saveGame(saveAgainSilent, saveAgainSuccess, saveAgainFail)
+                }
             }
         }
     }
@@ -599,10 +617,12 @@ class GameController(val username: String) {
         }
         return try {
             val res = ApiClient.submitScore(username, won, mode, boardSize, score)
-            if (res.optBoolean("success")) showStatus("积分已保存：$score 分") else showStatus("提交失败")
+            if (won) {
+                if (res.optBoolean("success")) showStatus("积分已保存：$score 分") else showStatus("提交失败")
+            }
             score
         } catch (_: Exception) {
-            showStatus("提交失败")
+            if (won) showStatus("提交失败")
             score
         }
     }
@@ -613,6 +633,9 @@ class GameController(val username: String) {
         statusJob?.cancel()
         statusJob = scope.launch {
             delay(4000)
+            // 保存/读档请求在途时暂不清空，避免“正在保存...”和结果之间闪现“已暂停”；
+            // 等待在途请求结束后再清空，防止结果消息残留
+            while (saving || loadingSave) delay(100)
             statusMsg = ""
         }
     }

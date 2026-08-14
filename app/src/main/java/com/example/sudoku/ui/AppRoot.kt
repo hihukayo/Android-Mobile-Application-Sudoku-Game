@@ -1,24 +1,17 @@
 package com.example.sudoku.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.sudoku.data.Session
 
 sealed interface Screen {
-    data object Splash : Screen
     data class Login(val showRegister: Boolean = false) : Screen
     data class Home(val username: String, val phone: String) : Screen
     data class Settings(val username: String, val phone: String) : Screen
@@ -26,17 +19,19 @@ sealed interface Screen {
 
 @Composable
 fun AppRoot() {
-    val stack = remember { mutableStateListOf<Screen>(Screen.Splash) }
+    // Session.init 已在 MainActivity.onCreate 同步完成，无需转圈闪屏，直接进入登录页/首页（启动更丝滑）
+    val initial = if (Session.username != null && Session.phone != null) {
+        Screen.Home(Session.username!!, Session.phone!!)
+    } else {
+        Screen.Login()
+    }
+    val stack = remember { mutableStateListOf(initial) }
     var homeTab by rememberSaveable { mutableIntStateOf(0) }
     BackHandler(enabled = stack.size > 1) {
         stack.removeAt(stack.lastIndex)
     }
     SudokuTheme {
         when (val s = stack.last()) {
-            Screen.Splash -> SplashScreen { target ->
-                stack.clear()
-                stack.add(target)
-            }
             is Screen.Login -> LoginRoot(
                 showRegister = s.showRegister,
                 onGoRegister = { stack.add(Screen.Login(showRegister = true)) },
@@ -70,19 +65,3 @@ fun AppRoot() {
     }
 }
 
-@Composable
-private fun SplashScreen(onDone: (Screen) -> Unit) {
-    LaunchedEffect(Unit) {
-        val u = Session.username
-        val p = Session.phone
-        onDone(if (u != null && p != null) Screen.Home(u, p) else Screen.Login())
-    }
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(LocalSudokuColors.current.background),
-        contentAlignment = Alignment.Center,
-    ) {
-        CircularProgressIndicator()
-    }
-}

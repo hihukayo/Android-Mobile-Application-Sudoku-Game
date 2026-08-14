@@ -473,7 +473,7 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GameIconTextBtn(AppIcons.CloudUpload, "存档", enabled = !controller.saving, onClick = { controller.saveGame() })
+            GameIconTextBtn(AppIcons.CloudUpload, "存档", onClick = { controller.saveGame() })
             Spacer(Modifier.width(24.dp))
             Box(Modifier.width(1.dp).height(24.dp).background(sc.divider))
             Spacer(Modifier.width(24.dp))
