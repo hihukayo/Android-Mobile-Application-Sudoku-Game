@@ -1,6 +1,7 @@
 package com.example.sudoku.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -27,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,6 +58,24 @@ fun RankScreen(username: String, refreshTick: Int) {
     var error by remember { mutableStateOf("") }
     var items by remember { mutableStateOf(listOf<RankItem>()) }
     var retryTick by remember { mutableStateOf(0) }
+    val listState = rememberLazyListState()
+
+    // 进入排行榜后自动滚动，让当前用户位于列表中央，数据再多也不怕找不到
+    LaunchedEffect(loading, items) {
+        if (loading || items.isEmpty()) return@LaunchedEffect
+        val myIndex = items.indexOfFirst { it.username == username }
+        if (myIndex < 0) return@LaunchedEffect
+        withFrameNanos {}
+        // 先滚到目标行，再按像素精调使其居中；第一/倒一无法居中时自动贴边，尽可能居中
+        listState.scrollToItem(myIndex)
+        withFrameNanos {}
+        val info = listState.layoutInfo
+        val t = info.visibleItemsInfo.firstOrNull { it.index == myIndex }
+        if (t != null) {
+            val delta = (t.offset + t.size / 2f) - info.viewportSize.height / 2f
+            listState.scrollBy(delta)
+        }
+    }
 
     LaunchedEffect(refreshTick, retryTick) {
         loading = true
@@ -131,7 +153,7 @@ fun RankScreen(username: String, refreshTick: Int) {
                     Text("完成一局游戏后数据将自动记录", fontSize = 13.sp, color = sc.textFaint)
                 }
             }
-            else -> LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            else -> LazyColumn(state = listState, modifier = Modifier.weight(1f).fillMaxWidth()) {
                 itemsIndexed(items) { index, item ->
                     RankItemRow(rank = index + 1, item = item, isMe = item.username == username)
                 }
