@@ -182,7 +182,7 @@ fun GameScreen(controller: GameController) {
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = 6.dp)
-                .offset(x = (-12).dp),
+                .offset(x = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
