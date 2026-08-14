@@ -90,7 +90,7 @@ fun SudokuBoard(
                     drawRect(bg, topLeft = Offset(c * cell, r * cell), size = Size(cell, cell))
                 }
             }
-            // 数字与笔�?
+            // 数字与笔记
             for (r in 0 until gs) {
                 for (c in 0 until gs) {
                     val v = puzzle.cells[r][c]
@@ -129,7 +129,7 @@ fun SudokuBoard(
                     }
                 }
             }
-            // 网格线（仅内部线条，外圈由下方统一圆角边框承担；杀手模式内部统一浅灰细线�?
+            // 网格线（仅内部线条，外圈由下方统一圆角边框承担；杀手模式内部统一浅灰细线）
             val thin = 0.5.dp.toPx()
             val thick = 2.dp.toPx()
             for (i in 1 until gs) {
@@ -141,7 +141,7 @@ fun SudokuBoard(
                 drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = stroke)
                 drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke)
             }
-            // 高亮/选中区域内的细格线四边统一加深（深浅适中），避免被高亮底色吞�?
+            // 高亮/选中区域内的细格线四边统一加深（深浅适中），避免被高亮底色吞掉
             val sr = selectedRow
             val selC = selectedCol
             if (sr != null && selC != null) {
@@ -240,12 +240,13 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
         }
         val op = cages[ci].op
         val sumText = cages[ci].sum.toString()
-        val sumStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = cageColor)
+        val labelColor = vividCageColor(cageColor)
+        val sumStyle = TextStyle(fontSize = 9.sp, fontWeight = FontWeight.Bold, color = labelColor)
         val layout = textMeasurer.measure(AnnotatedString(sumText), style = sumStyle)
         val opSize = 6.dp.toPx()
         val gap = 2.dp.toPx()
         // 所有笼子标签统一向右内缩，避免与棋盘右边框及圆角边线重叠
-        // 仅底边一行笼子避让棋盘边框与圆角，其余保持原�?
+        // 仅底边一行笼子避让棋盘边框与圆角，其余保持原位
         val isBottomRow = botR == gs - 1
         val rightMargin = if (isBottomRow) 6.dp.toPx() else 5.dp.toPx()
         val rightX = botC * cell + cell - rightMargin
@@ -262,20 +263,44 @@ private fun DrawScope.drawCages(puzzle: SudokuPuzzle, cell: Float, textMeasurer:
         val half = 2.2.dp.toPx()
         val strokeW = 1.1.dp.toPx()
         when (op) {
-            '-' -> drawLine(cageColor, opCenter - Offset(half, 0f), opCenter + Offset(half, 0f), strokeW)
+            '-' -> drawLine(labelColor, opCenter - Offset(half, 0f), opCenter + Offset(half, 0f), strokeW)
             '×' -> {
-                drawLine(cageColor, opCenter - Offset(half, half), opCenter + Offset(half, half), strokeW)
-                drawLine(cageColor, opCenter - Offset(half, -half), opCenter + Offset(half, -half), strokeW)
+                drawLine(labelColor, opCenter - Offset(half, half), opCenter + Offset(half, half), strokeW)
+                drawLine(labelColor, opCenter - Offset(half, -half), opCenter + Offset(half, -half), strokeW)
             }
             '÷' -> {
-                drawLine(cageColor, opCenter - Offset(half + 1.5.dp.toPx(), 0f), opCenter + Offset(half + 1.5.dp.toPx(), 0f), strokeW)
-                drawCircle(cageColor, radius = 0.8.dp.toPx(), center = opCenter + Offset(0f, -2.5.dp.toPx()))
-                drawCircle(cageColor, radius = 0.8.dp.toPx(), center = opCenter + Offset(0f, 2.5.dp.toPx()))
+                drawLine(labelColor, opCenter - Offset(half + 1.5.dp.toPx(), 0f), opCenter + Offset(half + 1.5.dp.toPx(), 0f), strokeW)
+                drawCircle(labelColor, radius = 0.8.dp.toPx(), center = opCenter + Offset(0f, -2.5.dp.toPx()))
+                drawCircle(labelColor, radius = 0.8.dp.toPx(), center = opCenter + Offset(0f, 2.5.dp.toPx()))
             }
             else -> { // '+'
-                drawLine(cageColor, opCenter - Offset(half, 0f), opCenter + Offset(half, 0f), strokeW)
-                drawLine(cageColor, opCenter - Offset(0f, half), opCenter + Offset(0f, half), strokeW)
+                drawLine(labelColor, opCenter - Offset(half, 0f), opCenter + Offset(half, 0f), strokeW)
+                drawLine(labelColor, opCenter - Offset(0f, half), opCenter + Offset(0f, half), strokeW)
             }
         }
     }
+}
+
+/** 笼子标签颜色：与笼子线条同色系但更鲜艳，自动适配深浅色模式 */
+private fun vividCageColor(cageColor: Color): Color {
+    val r = cageColor.red
+    val g = cageColor.green
+    val b = cageColor.blue
+    val max = maxOf(r, g, b)
+    val min = minOf(r, g, b)
+    val l = (max + min) / 2f
+    var hue = 0f
+    var sat = 0f
+    if (max != min) {
+        val d = max - min
+        sat = if (l > 0.5f) d / (2f - max - min) else d / (max + min)
+        hue = when (max) {
+            r -> ((g - b) / d + if (g < b) 6f else 0f) / 6f
+            g -> ((b - r) / d + 2f) / 6f
+            else -> ((r - g) / d + 4f) / 6f
+        }
+    }
+    val sat2 = (sat + 0.15f).coerceAtMost(0.45f)
+    val l2 = if (l > 0.5f) (l + 0.04f).coerceAtMost(0.8f) else (l + 0.03f).coerceAtMost(0.5f)
+    return Color.hsl(hue * 360f, sat2, l2)
 }
