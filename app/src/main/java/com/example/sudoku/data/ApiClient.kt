@@ -107,6 +107,7 @@ object ApiClient {
         errors: Int,
         isKiller: Boolean,
         killerDifficulty: String,
+        seed: Int,
         cages: List<Cage>?,
     ): JSONObject {
         fun nestedInts(grid: Array<IntArray>): JSONArray {
@@ -155,6 +156,7 @@ object ApiClient {
             put("errors", errors)
             put("isKiller", isKiller)
             put("killerDifficulty", killerDifficulty)
+            put("seed", seed)
             put("cages", cagesArr)
         })
     }

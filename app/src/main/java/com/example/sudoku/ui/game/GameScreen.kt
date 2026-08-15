@@ -33,6 +33,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -60,9 +62,11 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -70,6 +74,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import android.content.ClipboardManager
+import android.content.Context
 import com.example.sudoku.data.Session
 import com.example.sudoku.ui.AppIcons
 import com.example.sudoku.ui.Blue
@@ -85,6 +91,7 @@ fun GameScreen(controller: GameController) {
     val sc = LocalSudokuColors.current
     val scope = rememberCoroutineScope()
     var showModeMenu by remember { mutableStateOf(false) }
+    var showSeedDialog by remember { mutableStateOf(false) }
     var pendingResume by remember { mutableStateOf<JSONObject?>(null) }
     var pendingLoad by remember { mutableStateOf<JSONObject?>(null) }
     var focusTick by remember { mutableStateOf(0) }
@@ -153,19 +160,19 @@ fun GameScreen(controller: GameController) {
             onDone = { keyboard?.hide() },
         )
         Column(Modifier.fillMaxSize()) {
-        // ---- 顶栏：模式菜单 / 标题 / 笔记开关 ----
-        Row(
+        // ---- 顶栏：模式菜单 / 标题 / 种子与笔记开关 ----
+        Box(
             Modifier
                 .fillMaxWidth()
                 .height(52.dp)
                 .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
                 AppIcons.MoreHoriz,
                 contentDescription = "模式",
                 tint = sc.textFaint,
                 modifier = Modifier
+                    .align(Alignment.CenterStart)
                     .padding(6.dp)
                     .size(24.dp)
                     .clickable {
@@ -173,22 +180,42 @@ fun GameScreen(controller: GameController) {
                         keyboard?.hide()
                     },
             )
-            Spacer(Modifier.weight(1f))
-            Text("数独", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(Modifier.weight(1f))
-            Icon(
-                AppIcons.EditNote,
-                contentDescription = "笔记模式",
-                tint = if (controller.noteMode) sc.noteText else sc.textFaint,
-                modifier = Modifier
-                    .padding(6.dp)
-                    .size(24.dp)
-                    .clickable {
-                        if (!controller.paused && !controller.gameOver) {
-                            controller.toggleNoteMode()
-                        }
-                    },
+            Text(
+                "数独",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.align(Alignment.Center),
             )
+            Row(
+                Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    AppIcons.Casino,
+                    contentDescription = "种子",
+                    tint = sc.textFaint,
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .clickable {
+                            showSeedDialog = true
+                            keyboard?.hide()
+                        },
+                )
+                Icon(
+                    AppIcons.EditNote,
+                    contentDescription = "笔记模式",
+                    tint = if (controller.noteMode) sc.noteText else sc.textFaint,
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(24.dp)
+                        .clickable {
+                            if (!controller.paused && !controller.gameOver) {
+                                controller.toggleNoteMode()
+                            }
+                        },
+                )
+            }
         }
 
         HorizontalDivider(thickness = 0.5.dp)
@@ -361,6 +388,14 @@ fun GameScreen(controller: GameController) {
         }
     }
 
+
+    // 种子弹窗
+    if (showSeedDialog) {
+        SeedDialog(
+            controller = controller,
+            onDismiss = { showSeedDialog = false },
+        )
+    }
 
     // 续玩提示
     pendingResume?.let { res ->
@@ -785,4 +820,123 @@ private fun ResumeDialog(
             }
     }
 }
+}
+
+@Composable
+private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
+    val sc = LocalSudokuColors.current
+    val context = LocalContext.current
+    var seedText by remember { mutableStateOf("") }
+    var copied by remember { mutableStateOf(false) }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = sc.surface,
+            shadowElevation = 8.dp,
+            modifier = Modifier.width(300.dp),
+        ) {
+            Column(
+                Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("游戏种子", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = sc.textPrimary)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "相同种子可复现同一局谜题",
+                    fontSize = 11.sp,
+                    color = sc.textFaint,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(sc.surfaceAlt)
+                        .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        controller.seedLabel,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = sc.textPrimary,
+                        letterSpacing = 2.sp,
+                        fontFamily = FontFamily.Monospace,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            cm.setPrimaryClip(android.content.ClipData.newPlainText("seed", controller.seedLabel))
+                            copied = true
+                        },
+                        modifier = Modifier.size(34.dp),
+                    ) {
+                        Icon(
+                            if (copied) AppIcons.Check else AppIcons.CopyIcon,
+                            contentDescription = "复制种子",
+                            tint = sc.noteText,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = seedText,
+                    onValueChange = { seedText = it.uppercase().filter { ch -> ch.isLetterOrDigit() } },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = {
+                        val s = seedText.toIntOrNull(36)
+                        if (s != null) {
+                            controller.newGame(seed = s)
+                            onDismiss()
+                        }
+                    }),
+                    label = { Text("填入种子", fontSize = 12.sp, color = sc.textFaint) },
+                    placeholder = { Text("如 ${controller.seedLabel}", fontSize = 13.sp, color = sc.textFaint) },
+                    textStyle = TextStyle(color = sc.textPrimary, fontSize = 14.sp, letterSpacing = 1.5.sp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                )
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, sc.divider),
+                        contentPadding = PaddingValues(vertical = 10.dp),
+                    ) {
+                        Text("取消", fontSize = 14.sp, color = sc.textSecondary)
+                    }
+                    Button(
+                        onClick = {
+                            val s = seedText.toIntOrNull(36)
+                            if (s != null) {
+                                controller.newGame(seed = s)
+                                onDismiss()
+                            }
+                        },
+                        enabled = seedText.toIntOrNull(36) != null,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = sc.primary,
+                            contentColor = sc.onPrimary,
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        contentPadding = PaddingValues(vertical = 10.dp),
+                    ) {
+                        Text("生成", fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+    }
 }

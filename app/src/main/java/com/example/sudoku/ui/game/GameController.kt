@@ -33,6 +33,12 @@ class GameController(val username: String) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val rng = Random
 
+    /** 当前局的种子，用于复制/输入复现同一谜题 */
+    var currentSeed: Int = 0
+
+    /** 种子的可读字符串（36 进制大写），用于复制/输入 */
+    val seedLabel: String get() = currentSeed.toString(36).uppercase()
+
     /** 会话内只提示一次续玩 */
     var resumeChecked = false
 
@@ -134,23 +140,16 @@ class GameController(val username: String) {
     }
 
     // ---- 难度选择 ----
-    private fun pickClueCount() {
+    /** 随机挑选难度（经典模式），只决定难度标签，挖空数由种子推导 */
+    private fun pickDifficulty(): String {
         val diffs: List<String>
         val weights: List<Int>
-        val ranges: Map<String, List<Int>>
         if (boardSize == 4) {
             diffs = listOf("困难", "中等", "简单")
             weights = listOf(25, 50, 25)
-            ranges = mapOf("困难" to listOf(70, 80), "中等" to listOf(92, 105), "简单" to listOf(110, 130))
         } else {
             diffs = listOf("极简", "困难", "中等", "简单")
             weights = listOf(10, 25, 40, 25)
-            ranges = mapOf(
-                "极简" to listOf(17, 22),
-                "困难" to listOf(23, 28),
-                "中等" to listOf(29, 32),
-                "简单" to listOf(33, 36),
-            )
         }
         var roll = rng.nextInt(100)
         var diff = diffs[0]
@@ -161,17 +160,39 @@ class GameController(val username: String) {
                 break
             }
         }
-        val range = ranges[diff]!!
-        var clues = range[0] + rng.nextInt(range[1] - range[0] + 1)
-        var tries = 0
-        while (lastClueCounts.contains(clues) && tries < 30) {
-            clues = range[0] + rng.nextInt(range[1] - range[0] + 1)
-            tries++
-        }
-        lastClueCounts.add(clues)
-        if (lastClueCounts.size > 3) lastClueCounts.removeAt(0)
         difficulty = diff
-        clueCount = clues
+        return diff
+    }
+
+    /** 当前模式编号：0=3×3 经典，1=算数数独，2=4×4 */
+    private fun modeCode(): Int = when {
+        isKiller -> 1
+        boardSize == 4 -> 2
+        else -> 0
+    }
+
+    private fun difficultyCode(label: String): Int = when (label) {
+        "入门" -> 0
+        "极简" -> 1
+        "简单" -> 2
+        "中等" -> 3
+        else -> 4
+    }
+
+    private fun difficultyLabel(code: Int): String = when (code) {
+        0 -> "入门"
+        1 -> "极简"
+        2 -> "简单"
+        3 -> "中等"
+        else -> "困难"
+    }
+
+    /** 各难度对应的挖空数范围 */
+    private fun clueRange(diff: String): List<Int> = when (diff) {
+        "极简" -> listOf(17, 22)
+        "简单" -> if (boardSize == 4) listOf(110, 130) else listOf(33, 36)
+        "困难" -> if (boardSize == 4) listOf(70, 80) else listOf(23, 28)
+        else -> if (boardSize == 4) listOf(92, 105) else listOf(29, 32)
     }
 
     /** 首次检查存档后若控制器被重建，自动补开一局，避免显示空棋盘 */
@@ -181,7 +202,7 @@ class GameController(val username: String) {
         newGame(silent = true, feedback = false)
     }
 
-    fun newGame(silent: Boolean = false, feedback: Boolean = true) {
+    fun newGame(silent: Boolean = false, feedback: Boolean = true, seed: Int? = null) {
         if (generating) return
         if (feedback) {
             if (silent) {
@@ -197,24 +218,60 @@ class GameController(val username: String) {
         generating = true
         val gen = ++gameGen
         scope.launch {
-            // 主线程先决定难度，再切后台生成谜题，避免卡 UI 与连点堆积
+            // 主线程先决定模式/难度，再切后台生成谜题，避免卡 UI 与连点堆积
             val newDiff: String
             val genBoardSize: Int
+            var diffCode: Int
+            if (seed != null) {
+                // 种子内携带模式与难度：无论当前处于哪种模式，输入相同种子都能还原同一局
+                diffCode = seed and 7
+                val mode = (seed shr 3) and 3
+                if (mode != modeCode()) {
+                    isKiller = mode == 1
+                    boardSize = if (mode == 2) 4 else 3
+                }
+                val label = difficultyLabel(diffCode)
+                difficulty = label
+                killerDifficulty = label
+            } else {
+                diffCode = if (isKiller) {
+                    val diffRoll = rng.nextInt(100)
+                    val d = if (diffRoll < 25) "入门" else if (diffRoll < 75) "中等" else "困难"
+                    killerDifficulty = d
+                    difficultyCode(d)
+                } else {
+                    pickDifficulty()
+                    difficultyCode(difficulty)
+                }
+            }
             if (isKiller) {
-                val diffRoll = rng.nextInt(100)
-                newDiff = if (diffRoll < 25) "入门" else if (diffRoll < 75) "中等" else "困难"
-                killerDifficulty = newDiff
+                newDiff = killerDifficulty
                 genBoardSize = 3
             } else {
-                pickClueCount()
                 newDiff = difficulty
                 genBoardSize = boardSize
             }
-            val newPuzzle = withContext(Dispatchers.Default) {
-                if (isKiller) SudokuGenerator(3).generateKiller(newDiff)
-                else SudokuGenerator(genBoardSize).generate(clueCount)
+            var puzzleSeed: Int = seed?.let { it ushr 5 } ?: rng.nextInt(1 shl 26)
+            if (!isKiller) {
+                val range = clueRange(newDiff)
+                var clues = range[0] + puzzleSeed % (range[1] - range[0] + 1)
+                if (seed == null) {
+                    var tries = 0
+                    while (lastClueCounts.contains(clues) && tries < 30) {
+                        puzzleSeed = rng.nextInt(1 shl 26)
+                        clues = range[0] + puzzleSeed % (range[1] - range[0] + 1)
+                        tries++
+                    }
+                    lastClueCounts.add(clues)
+                    if (lastClueCounts.size > 3) lastClueCounts.removeAt(0)
+                }
+                clueCount = clues
             }
-            // 生成期间若已恢复存档，放弃本次新局，避免覆盖恢复的棋盘与计时
+            currentSeed = (puzzleSeed shl 5) or (modeCode() shl 3) or diffCode
+            val newPuzzle = withContext(Dispatchers.Default) {
+                if (isKiller) SudokuGenerator(3, puzzleSeed).generateKiller(newDiff)
+                else SudokuGenerator(genBoardSize, puzzleSeed).generate(clueCount)
+            }
             if (gen != gameGen) return@launch
             puzzle = newPuzzle
             generating = false
@@ -475,6 +532,7 @@ class GameController(val username: String) {
                     errors = errors,
                     isKiller = isKiller,
                     killerDifficulty = killerDifficulty,
+                    seed = currentSeed,
                     cages = puzzle.cages,
                 )
                 if (!silent) showStatus(successMsg)
@@ -517,6 +575,7 @@ class GameController(val username: String) {
         val seconds = res.optInt("seconds", 0)
         val errors = res.optInt("errors", 0)
         val killerDifficulty = res.optString("killerDifficulty", "中等")
+        if (res.has("seed")) currentSeed = res.optInt("seed", 0)
         val cagesRaw = res.optJSONArray("cages")
 
         val gs = boardSize * boardSize
