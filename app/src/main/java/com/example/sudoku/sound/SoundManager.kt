@@ -16,7 +16,10 @@ object SoundManager {
     private var successId = 0
     private var placementId = 0
     private var failedId = 0
-    private val loaded = BooleanArray(4)
+    private var errorId = 0
+    private var gameoverId = 0
+    private var winId = 0
+    private val loaded = BooleanArray(7)
     private val pending = mutableSetOf<Int>()
     private var lastClickMs = 0L
 
@@ -38,6 +41,9 @@ object SoundManager {
         successId = p.load(context, R.raw.success, 1)
         placementId = p.load(context, R.raw.placement, 1)
         failedId = p.load(context, R.raw.failed, 1)
+        errorId = p.load(context, R.raw.error, 1)
+        gameoverId = p.load(context, R.raw.gameover, 1)
+        winId = p.load(context, R.raw.gamewin, 1)
         vibrator = if (Build.VERSION.SDK_INT >= 31) {
             val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             manager.defaultVibrator
@@ -60,6 +66,9 @@ object SoundManager {
         successId -> 1
         placementId -> 2
         failedId -> 3
+        errorId -> 4
+        gameoverId -> 5
+        winId -> 6
         else -> -1
     }
 
@@ -89,6 +98,18 @@ object SoundManager {
 
     fun failed() {
         play(failedId)
+    }
+
+    fun error() {
+        play(errorId)
+    }
+
+    fun gameover() {
+        play(gameoverId)
+    }
+
+    fun win() {
+        play(winId)
     }
 
     fun tap() = vibrate(30)

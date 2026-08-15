@@ -295,17 +295,19 @@ class GameController(val username: String) {
         }
         revision++
         pushUndo(UndoEntry(r, c, old, oldNotes, n, emptySet()))
-        SoundManager.placement()
         if (isError) {
             errors++
             if (errors >= maxErrors) {
                 stopTimer()
-                SoundManager.failed()
+                SoundManager.gameover()
                 lastScore = calculateScore()
                 paused = true
                 gameOver = true
                 return
             }
+            SoundManager.error()
+        } else {
+            SoundManager.placement()
         }
     }
 
@@ -409,12 +411,12 @@ class GameController(val username: String) {
         if (paused || gameOver) return
         if (puzzle.isComplete() && puzzle.isCorrect()) {
             stopTimer()
-            SoundManager.success()
-            scope.launch {
-                lastScore = submitScore(won = true)
-                paused = true
-                isSolved = true
-            }
+            // 本地立即结算，网络提交放后台，断网时也能马上播音效和显示结果
+            lastScore = calculateScore()
+            paused = true
+            isSolved = true
+            SoundManager.win()
+            scope.launch { submitScore(won = true, score = lastScore) }
         } else {
             showStatus("还有空格未填，请再检查一下吧")
         }
@@ -618,26 +620,22 @@ class GameController(val username: String) {
         return (base * diffCoeff * timeCoeff * errorPenalty).roundToInt()
     }
 
-    private suspend fun submitScore(won: Boolean): Int {
-        val score = calculateScore()
+        private suspend fun submitScore(won: Boolean, score: Int) {
         val mode = when {
-            isKiller -> "算数$killerDifficulty"
+            isKiller -> "算术$killerDifficulty"
             boardSize == 4 -> "4×4$difficulty"
             else -> "3×3$difficulty"
         }
-        return try {
-            val res = ApiClient.submitScore(username, won, mode, boardSize, score)
+        try {
+            val res = ApiClient.submitScore(username, won, mode, boardSize, score, puzzle.fingerprint())
             if (won) {
                 if (res.optBoolean("success")) showStatus("积分已保存：$score 分") else showStatus("提交失败")
             }
-            score
         } catch (_: Exception) {
             if (won) showStatus("提交失败")
-            score
         }
     }
 
-    // ---- UI 辅助 ----
     fun showStatus(msg: String) {
         statusMsg = msg
         statusJob?.cancel()

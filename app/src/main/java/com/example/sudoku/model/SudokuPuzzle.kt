@@ -22,6 +22,39 @@ class SudokuPuzzle(val boardSize: Int = 3) {
 
     val isKiller: Boolean get() = cages != null
 
+    /** 谜题指纹：同一局（相同棋盘）只统计一次，与后端 puzzle_key 对应 */
+    fun fingerprint(): String {
+        val sb = StringBuilder()
+        sb.append(boardSize).append('|')
+        for (r in 0 until gridSize) {
+            for (c in 0 until gridSize) {
+                sb.append(if (given[r][c]) '1' else '0')
+            }
+        }
+        sb.append('|')
+        for (r in 0 until gridSize) {
+            for (c in 0 until gridSize) {
+                if (r > 0 || c > 0) sb.append(',')
+                sb.append(solution[r][c])
+            }
+        }
+        cages?.let { cageList ->
+            sb.append('|')
+            for ((i, cage) in cageList.withIndex()) {
+                if (i > 0) sb.append(';')
+                sb.append(cage.op).append(cage.sum).append('[')
+                for ((j, idx) in cage.cellIndices.withIndex()) {
+                    if (j > 0) sb.append('_')
+                    sb.append(idx)
+                }
+                sb.append(']')
+            }
+        }
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        return md.digest(sb.toString().toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+    }
+
     val cageLookup: List<Int>
         get() {
             _cageLookup?.let { return it }

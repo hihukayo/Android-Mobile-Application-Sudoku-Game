@@ -168,12 +168,14 @@ object ApiClient {
         gameMode: String,
         boardSize: Int,
         score: Int,
+        puzzleKey: String = "",
     ): JSONObject = request("POST", "/rank/submit", JSONObject().apply {
         put("username", username)
         put("won", won)
         put("gameMode", gameMode)
         put("boardSize", boardSize)
         put("score", score)
+        put("puzzleKey", puzzleKey)
     })
 
     suspend fun getRankList(): JSONObject = request("GET", "/rank/list")

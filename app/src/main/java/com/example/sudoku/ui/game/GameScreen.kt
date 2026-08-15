@@ -101,7 +101,8 @@ fun GameScreen(controller: GameController) {
         Session.autoResumeChecked = true
         if (controller.resumeChecked) return@LaunchedEffect
         controller.resumeChecked = true
-        controller.newGame()
+        // 初次进入静默开局，不播放新局音效
+        controller.newGame(feedback = false)
         controller.awaitPendingSave()
         val res = controller.fetchSave()
         if (res != null && res.optBoolean("success")) {
