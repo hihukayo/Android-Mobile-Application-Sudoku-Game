@@ -60,6 +60,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -88,6 +89,7 @@ fun GameScreen(controller: GameController) {
     var pendingLoad by remember { mutableStateOf<JSONObject?>(null) }
     var focusTick by remember { mutableStateOf(0) }
     val keyboard = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
 
     // 进入游戏页时检查存档，提示续玩
     LaunchedEffect(Unit) {
@@ -345,6 +347,9 @@ fun GameScreen(controller: GameController) {
                 current = if (controller.isKiller) "3×3-killer" else if (controller.boardSize == 4) "4×4" else "3×3",
                 onSelect = { mode ->
                     showModeMenu = false
+                    // 切换模式时收起键盘并清除焦点，避免输入法类型变化导致键盘重新弹出
+                    keyboard?.hide()
+                    focusManager.clearFocus()
                     controller.switchMode(mode)
                 },
                 modifier = Modifier
