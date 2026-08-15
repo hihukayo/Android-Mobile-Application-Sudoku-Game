@@ -195,8 +195,8 @@ fun GameScreen(controller: GameController) {
                     contentDescription = "种子",
                     tint = sc.textFaint,
                     modifier = Modifier
-                        .padding(6.dp)
-                        .size(24.dp)
+                        .padding(3.dp)
+                        .size(20.dp)
                         .clickable {
                             showSeedDialog = true
                             keyboard?.hide()
@@ -207,8 +207,8 @@ fun GameScreen(controller: GameController) {
                     contentDescription = "笔记模式",
                     tint = if (controller.noteMode) sc.noteText else sc.textFaint,
                     modifier = Modifier
-                        .padding(6.dp)
-                        .size(24.dp)
+                        .padding(3.dp)
+                        .size(20.dp)
                         .clickable {
                             if (!controller.paused && !controller.gameOver) {
                                 controller.toggleNoteMode()
@@ -848,13 +848,13 @@ private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
                     textAlign = TextAlign.Center,
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(
+                Box(
                     Modifier
                         .fillMaxWidth()
+                        .height(46.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(sc.surfaceAlt)
-                        .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                        .background(sc.surfaceAlt),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         controller.seedLabel,
@@ -864,7 +864,6 @@ private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
                         letterSpacing = 2.sp,
                         fontFamily = FontFamily.Monospace,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f),
                     )
                     IconButton(
                         onClick = {
@@ -872,7 +871,7 @@ private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
                             cm.setPrimaryClip(android.content.ClipData.newPlainText("seed", controller.seedLabel))
                             copied = true
                         },
-                        modifier = Modifier.size(34.dp),
+                        modifier = Modifier.align(Alignment.CenterEnd).size(38.dp),
                     ) {
                         Icon(
                             if (copied) AppIcons.Check else AppIcons.CopyIcon,
@@ -917,13 +916,13 @@ private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
                     }
                     Button(
                         onClick = {
+                            // 按钮常亮不熄灭：输入无效时点击不生效
                             val s = seedText.toIntOrNull(36)
                             if (s != null) {
                                 controller.newGame(seed = s)
                                 onDismiss()
                             }
                         },
-                        enabled = seedText.toIntOrNull(36) != null,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.buttonColors(
