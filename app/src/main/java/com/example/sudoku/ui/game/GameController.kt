@@ -31,6 +31,8 @@ private class UndoEntry(
 
 class GameController(val username: String) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    /** 存档专用作用域：dispose 时不被取消，保证退出前自动存档能完成 */
+    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val rng = Random
 
     /** 当前局的种子，用于复制/输入复现同一谜题 */
@@ -42,7 +44,7 @@ class GameController(val username: String) {
     /** 会话内只提示一次续玩 */
     var resumeChecked = false
 
-    /** 控制器是否已自动开过一局（重建后补一局，避免空棋盘） */
+    /** 控制器是否已开过一局（新局或读档后为 true；切页重建控制器时才补开一局，已有棋局则保持原局） */
     private var autoStarted = false
 
     /** 存档/读档进行中，防止重复请求 */
@@ -206,6 +208,7 @@ class GameController(val username: String) {
 
     fun newGame(silent: Boolean = false, feedback: Boolean = true, seed: Int? = null) {
         if (generating) return
+        autoStarted = true
         if (feedback) {
             if (silent) {
                 SoundManager.tap()
@@ -522,7 +525,7 @@ class GameController(val username: String) {
         }
         saving = true
         if (!silent) showStatus("正在保存...")
-        scope.launch {
+        saveScope.launch {
             try {
                 ApiClient.saveGame(
                     username = username,
@@ -569,6 +572,7 @@ class GameController(val username: String) {
 
     fun restoreFromData(res: JSONObject) {
         gameGen++ // 使进行中的新局生成失效，防止其覆盖恢复的棋盘与计时
+        autoStarted = true
         val boardSize = res.optInt("boardSize", 3)
         val isKiller = res.optBoolean("isKiller")
         val cellsRaw = res.optJSONArray("cells") ?: JSONArray()

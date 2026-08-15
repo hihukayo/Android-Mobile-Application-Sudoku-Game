@@ -1,4 +1,4 @@
-﻿package com.example.sudoku.ui
+package com.example.sudoku.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -34,13 +34,13 @@ import com.example.sudoku.ui.game.GameScreen
 fun HomeScreen(
     username: String,
     phone: String,
+    gameController: GameController,
     selectedTab: Int,
     onTabChange: (Int) -> Unit,
     onOpenSettings: () -> Unit,
     onSessionEnd: () -> Unit,
 ) {
     val sc = LocalSudokuColors.current
-    val gameController = remember { GameController(username) }
     var rankTick by remember { mutableIntStateOf(0) }
     var profileTick by remember { mutableIntStateOf(0) }
 
