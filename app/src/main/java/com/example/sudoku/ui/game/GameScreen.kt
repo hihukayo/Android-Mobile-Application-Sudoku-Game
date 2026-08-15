@@ -281,39 +281,55 @@ fun GameScreen(controller: GameController) {
         ) {
             val side = minOf(maxWidth, (maxHeight - 26.dp).coerceAtLeast(1.dp))
             Column(Modifier.fillMaxSize()) {
-                AnimatedContent(
-                    targetState = controller.boardSize to controller.isKiller,
-                    transitionSpec = {
-                        // 模式切换：旧棋盘淡出，新棋盘淡入并轻微放大，过渡更丝滑
-                        (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f, animationSpec = tween(220)))
-                            .togetherWith(fadeOut(tween(120)))
-                    },
-                    label = "boardMode",
-                ) { mode ->
-                    val (boardSizeKey, killerKey) = mode
-                    // 快照当前棋盘，动画期间旧棋盘保持旧内容，避免两边同时显示新棋盘
-                    var snapshotPuzzle by remember(boardSizeKey, killerKey) { mutableStateOf(controller.puzzle) }
-                    LaunchedEffect(controller.revision) {
-                        snapshotPuzzle = controller.puzzle
-                    }
-                    SudokuBoard(
-                        puzzle = snapshotPuzzle,
-                        readOnly = controller.paused || controller.gameOver,
-                        selectedRow = controller.selectedRow,
-                        selectedCol = controller.selectedCol,
-                        errorCells = controller.errorCells,
-                        revision = controller.revision,
-                        onCellTap = { r, c ->
-                            controller.selectCell(r, c)
-                            if (!controller.paused && !controller.gameOver) {
-                                focusTick++
-                                keyboard?.show()
-                            }
+                // 棋盘固定大小；加载遮罩只覆盖棋盘，不盖整页（与 Flutter 一致）
+                Box(
+                    Modifier
+                        .size(side)
+                        .align(Alignment.CenterHorizontally),
+                ) {
+                    AnimatedContent(
+                        targetState = controller.boardToken,
+                        transitionSpec = {
+                            // 新局/读档/切模式：旧棋盘淡出，新棋盘淡入并轻微放大，过渡更丝滑
+                            (fadeIn(tween(220)) + scaleIn(initialScale = 0.94f, animationSpec = tween(220)))
+                                .togetherWith(fadeOut(tween(120)))
                         },
-                        modifier = Modifier
-                            .size(side)
-                            .align(Alignment.CenterHorizontally),
-                    )
+                        label = "boardMode",
+                    ) { _ ->
+                        // 快照当前棋盘，动画期间旧棋盘保持旧内容，避免两边同时显示新棋盘
+                        var snapshotPuzzle by remember { mutableStateOf(controller.puzzle) }
+                        SudokuBoard(
+                            puzzle = snapshotPuzzle,
+                            readOnly = controller.paused || controller.gameOver,
+                            selectedRow = controller.selectedRow,
+                            selectedCol = controller.selectedCol,
+                            errorCells = controller.errorCells,
+                            revision = controller.revision,
+                            onCellTap = { r, c ->
+                                controller.selectCell(r, c)
+                                if (!controller.paused && !controller.gameOver) {
+                                    focusTick++
+                                    keyboard?.show()
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                    // 新局生成中只遮棋盘，避免 4×4（16×16）生成时看起来像卡死
+                    if (controller.generating) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(sc.surface.copy(alpha = 0.55f))
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {},
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = sc.primary)
+                        }
+                    }
                 }
                 Spacer(Modifier.height(4.dp))
                 StatusText(controller)
@@ -345,21 +361,6 @@ fun GameScreen(controller: GameController) {
         )
         }
 
-        // ---- 新局生成中显示加载遮罩，避免 4×4（16×16）生成时看起来像卡死 ----
-        if (controller.generating) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(sc.surface.copy(alpha = 0.55f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) {},
-                contentAlignment = Alignment.Center,
-            ) {
-                CircularProgressIndicator(color = sc.primary)
-            }
-        }
 
         // ---- 模式下拉菜单（紧贴顶部分割线下方）----
         if (showModeMenu) {

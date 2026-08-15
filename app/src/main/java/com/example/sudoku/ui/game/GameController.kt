@@ -97,6 +97,8 @@ class GameController(val username: String) {
         private set
     /** 修订号：棋盘数据就地修改后递增，驱动 Compose 重绘 */
     var revision by mutableStateOf(0)
+    /// 棋盘代币：仅新局/读档/切模式等替换谜题时递增，用于棋盘交叉淡化（撤销/填数等原地修改不触发）
+    var boardToken by mutableStateOf(0)
         private set
 
     private val lastClueCounts = mutableListOf<Int>()
@@ -293,6 +295,7 @@ class GameController(val username: String) {
             selectedRow = null
             selectedCol = null
             revision++
+            boardToken++
             startTimer()
         }
     }
@@ -629,6 +632,7 @@ class GameController(val username: String) {
         selectedRow = null
         selectedCol = null
         revision++
+        boardToken++
         startTimer()
         showStatus("存档已恢复")
     }
