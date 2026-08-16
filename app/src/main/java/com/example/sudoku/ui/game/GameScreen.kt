@@ -1,4 +1,4 @@
-﻿package com.example.sudoku.ui.game
+package com.example.sudoku.ui.game
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -8,8 +8,10 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -34,7 +36,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -882,25 +883,57 @@ private fun SeedDialog(controller: GameController, onDismiss: () -> Unit) {
                         )
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = seedText,
-                    onValueChange = { seedText = it.uppercase().filter { ch -> ch.isLetterOrDigit() } },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        val s = seedText.toIntOrNull(36)
-                        if (s != null) {
-                            controller.newGame(seed = s)
-                            onDismiss()
-                        }
-                    }),
-                    label = { Text("填入种子", fontSize = 12.sp, color = sc.textFaint) },
-                    placeholder = { Text("如 ${controller.seedLabel}", fontSize = 13.sp, color = sc.textFaint) },
-                    textStyle = TextStyle(color = sc.textPrimary, fontSize = 14.sp, letterSpacing = 1.5.sp),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                )
+                Spacer(Modifier.height(10.dp))
+                // 输入框：与生成码栏同高同宽，label 悬浮骑线，输入文字居中
+                val seedInteraction = remember { MutableInteractionSource() }
+                val seedFocused by seedInteraction.collectIsFocusedAsState()
+                val seedShowLabel = seedFocused || seedText.isNotEmpty()
+                Box(
+                    Modifier.fillMaxWidth().height(46.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(sc.surface)
+                            .border(if (seedFocused) 2.dp else 1.dp, if (seedFocused) sc.primary else sc.divider, RoundedCornerShape(10.dp)),
+                    ) {
+                        BasicTextField(
+                            value = seedText,
+                            onValueChange = { seedText = it.uppercase().filter { ch -> ch.isLetterOrDigit() } },
+                            singleLine = true,
+                            textStyle = TextStyle(color = sc.textPrimary, fontSize = 14.sp, letterSpacing = 1.5.sp),
+                            cursorBrush = SolidColor(sc.noteText),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = {
+                                val s = seedText.toIntOrNull(36)
+                                if (s != null) {
+                                    controller.newGame(seed = s)
+                                    onDismiss()
+                                }
+                            }),
+                            interactionSource = seedInteraction,
+                            modifier = Modifier.fillMaxSize(),
+                            decorationBox = { inner ->
+                                Box(Modifier.fillMaxSize().padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
+                                    if (!seedShowLabel && seedText.isEmpty()) {
+                                        Text("如 ${controller.seedLabel}", fontSize = 13.sp, color = sc.textFaint)
+                                    }
+                                    inner()
+                                }
+                            },
+                        )
+                    }
+                    if (seedShowLabel) {
+                        Text("填入种子", fontSize = 11.sp, lineHeight = 11.sp, color = if (seedFocused) sc.primary else sc.textFaint, modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 12.dp)
+                            .offset(y = (-9).dp)
+                            .background(sc.surface, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.height(14.dp))
                 Row(
                     Modifier.fillMaxWidth(),
