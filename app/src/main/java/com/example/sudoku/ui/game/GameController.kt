@@ -139,7 +139,7 @@ class GameController(val username: String) {
     fun dispose() {
         stopTimer()
         statusJob?.cancel()
-        if (!gameOver && !isSolved && seconds > 3) autoSave()
+        if (!gameOver && !isSolved && !hasGivenUp && seconds > 3) autoSave()
         scope.coroutineContext[Job]?.cancel()
     }
 
@@ -308,7 +308,7 @@ class GameController(val username: String) {
         val becoming = !paused
         paused = becoming
         // 暂停时仅当玩过（动过棋盘）才静默自动存档，未玩过不覆盖旧存档；内容与手动存档一致（含计时）
-        if (becoming && !gameOver && !isSolved && dirty) saveGame(silent = true)
+        if (becoming && !gameOver && !isSolved && !hasGivenUp && dirty) saveGame(silent = true)
     }
 
     fun selectCell(r: Int, c: Int) {
@@ -515,6 +515,11 @@ class GameController(val username: String) {
 
     // ---- 存档 ----
     fun saveGame(silent: Boolean = false, successMsg: String = "存档成功", failMsg: String = "存档失败，请检查网络连接后重试") {
+        // 已完成的棋局不允许再存档，防止读档后直接点完成重复提交成绩
+        if (isSolved || gameOver || hasGivenUp) {
+            if (!silent) showStatus("本局已结束，无需存档")
+            return
+        }
         if (saving) {
             // 已有存档请求在途：记录本次存档参数，完成后自动补存
             saveAgain = true
@@ -561,7 +566,7 @@ class GameController(val username: String) {
 
     fun autoSave() {
         if (!dirty) return
-        if (!gameOver && !isSolved && seconds > 3) saveGame(silent = true)
+        if (!gameOver && !isSolved && !hasGivenUp && seconds > 3) saveGame(silent = true)
     }
 
     suspend fun fetchSave(): JSONObject? = try {
@@ -622,7 +627,8 @@ class GameController(val username: String) {
         puzzle = p
         this.seconds = seconds
         this.errors = errors
-        isSolved = false
+        // 读档后若棋盘已全部填对，视为已完成，防止直接点完成再次提交成绩
+        isSolved = puzzle.isComplete() && puzzle.isCorrect()
         hasGivenUp = false
         gameOver = errors >= (if (boardSize == 3) 3 else 6)
         paused = false
@@ -637,7 +643,7 @@ class GameController(val username: String) {
         selectedCol = null
         revision++
         boardToken++
-        startTimer()
+        if (!isSolved && !gameOver) startTimer()
         showStatus("存档已恢复")
     }
 

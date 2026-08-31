@@ -486,10 +486,11 @@ private fun StatusText(controller: GameController) {
     val sc = LocalSudokuColors.current
     val style = MaterialTheme.typography.bodySmall
     val (text, color) = when {
+        // 临时提示（保存/读档等结果）优先显示，避免被“解答正确”等常驻文字覆盖
+        controller.statusMsg.isNotEmpty() -> controller.statusMsg to sc.textSecondary
         controller.isSolved -> "解答正确！用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to sc.userInput
         controller.hasGivenUp -> "已查看答案" to Color(0xFFFF9800)
         controller.gameOver -> "游戏结束，用时 ${controller.formatTime(controller.seconds)}，获得 ${controller.lastScore} 积分" to Red
-        controller.statusMsg.isNotEmpty() -> controller.statusMsg to sc.textSecondary
         controller.paused -> "已暂停" to sc.textSecondary
         else -> "" to sc.textSecondary
     }
@@ -547,7 +548,7 @@ private fun BottomBar(controller: GameController, onLoad: () -> Unit) {
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GameIconTextBtn(AppIcons.CloudUpload, "存档", onClick = { controller.saveGame() })
+            GameIconTextBtn(AppIcons.CloudUpload, "存档", enabled = !controller.isSolved && !controller.gameOver && !controller.hasGivenUp, onClick = { controller.saveGame() })
             Spacer(Modifier.width(24.dp))
             Box(Modifier.width(1.dp).height(24.dp).background(sc.divider))
             Spacer(Modifier.width(24.dp))
