@@ -22,9 +22,26 @@ object Session {
     val phone: String?
         get() = prefs.getString("login_phone", null)
 
-    fun saveLogin(username: String, phone: String) {
-        prefs.edit().putString("login_username", username).putString("login_phone", phone).apply()
+    /** 保存登录信息；password 非空时同时缓存（只保留最新一条），用于同设备离线快速登入 */
+    fun saveLogin(username: String, phone: String, password: String? = null) {
+        val editor = prefs.edit().putString("login_username", username).putString("login_phone", phone)
+        if (password != null) {
+            // 只保留最新一条成功登录的缓存记录
+            editor.putString("login_password", password)
+            editor.putString("last_login_username", username)
+            editor.putString("last_login_phone", phone)
+        }
+        editor.apply()
     }
+
+    /** 上次成功登录缓存的密码（退出登录不清除，便于同设备直登） */
+    fun getCachedPassword(): String? = prefs.getString("login_password", null)
+
+    /** 上次成功登录缓存的用户名（只保留最新一条） */
+    fun getLastLoginUsername(): String? = prefs.getString("last_login_username", null)
+
+    /** 上次成功登录缓存的手机号（只保留最新一条） */
+    fun getLastLoginPhone(): String? = prefs.getString("last_login_phone", null)
 
     fun clearLogin() {
         prefs.edit().remove("login_username").remove("login_phone").apply()

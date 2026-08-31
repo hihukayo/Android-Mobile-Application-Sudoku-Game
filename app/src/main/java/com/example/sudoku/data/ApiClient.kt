@@ -30,9 +30,11 @@ object ApiClient {
 
     /** 单次请求总超时（毫秒），超过即停止，避免一直转圈 */
     private const val REQUEST_TIMEOUT_MS = 8000L
+    /** 存档/读档同步用更短的超时，离线时快速失败，避免一直转圈 */
+    private const val SYNC_TIMEOUT_MS = 3000L
 
-    private suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject =
-        withTimeout(REQUEST_TIMEOUT_MS) {
+    private suspend fun request(method: String, path: String, body: JSONObject? = null, timeoutMs: Long = REQUEST_TIMEOUT_MS): JSONObject =
+        withTimeout(timeoutMs) {
             withContext(Dispatchers.IO) {
                 val conn = URL("$baseUrl$path").openConnection() as HttpURLConnection
                 try {
@@ -109,60 +111,16 @@ object ApiClient {
         killerDifficulty: String,
         seed: Int,
         cages: List<Cage>?,
-    ): JSONObject {
-        fun nestedInts(grid: Array<IntArray>): JSONArray {
-            val arr = JSONArray()
-            for (r in grid) {
-                val row = JSONArray()
-                for (v in r) row.put(v)
-                arr.put(row)
-            }
-            return arr
-        }
-        val notesArr = JSONArray()
-        for (row in notes) {
-            val rowArr = JSONArray()
-            for (s in row) {
-                val list = JSONArray()
-                for (v in s) list.put(v)
-                rowArr.put(list)
-            }
-            notesArr.put(rowArr)
-        }
-        val givenArr = JSONArray()
-        for (row in given) {
-            val rowArr = JSONArray()
-            for (b in row) rowArr.put(if (b) 1 else 0)
-            givenArr.put(rowArr)
-        }
-        val cagesArr = JSONArray()
-        cages?.forEach { cage ->
-            val cageJson = JSONObject()
-            val idx = JSONArray()
-            for (i in cage.cellIndices) idx.put(i)
-            cageJson.put("cellIndices", idx)
-            cageJson.put("sum", cage.sum)
-            cageJson.put("op", cage.op.toString())
-            cagesArr.put(cageJson)
-        }
-        return request("POST", "/save", JSONObject().apply {
-            put("username", username)
-            put("boardSize", boardSize)
-            put("cells", nestedInts(cells))
-            put("notes", notesArr)
-            put("solution", nestedInts(solution))
-            put("given", givenArr)
-            put("seconds", seconds)
-            put("errors", errors)
-            put("isKiller", isKiller)
-            put("killerDifficulty", killerDifficulty)
-            put("seed", seed)
-            put("cages", cagesArr)
-        })
-    }
+    ): JSONObject = request("POST", "/save", buildSaveJson(
+        username, boardSize, cells, notes, solution, given,
+        seconds, errors, isKiller, killerDifficulty, seed, cages), SYNC_TIMEOUT_MS)
+
+    /** 把本地已序列化好的存档直接上传（用于“本地较新”时覆盖云端） */
+    suspend fun uploadRawSave(save: JSONObject): JSONObject =
+        request("POST", "/save", save, SYNC_TIMEOUT_MS)
 
     suspend fun loadGame(username: String): JSONObject =
-        request("GET", "/load?username=${java.net.URLEncoder.encode(username, "UTF-8")}")
+        request("GET", "/load?username=${java.net.URLEncoder.encode(username, "UTF-8")}", timeoutMs = SYNC_TIMEOUT_MS)
 
     suspend fun submitScore(
         username: String,

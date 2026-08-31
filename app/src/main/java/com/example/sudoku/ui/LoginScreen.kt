@@ -121,13 +121,28 @@ fun LoginScreen(onGoRegister: () -> Unit, onLoggedIn: (String, String) -> Unit) 
                                 snackbar.showSnackbar("请输入账号和密码")
                                 return@launch
                             }
+                            val acc = account.trim()
+                            val pwd = password.trim()
+                            // 同设备缓存比对：账号密码与上次成功登录一致 → 直接本地登入（离线也能登）
+                            val cachedUser = Session.getLastLoginUsername()
+                            val cachedPhone = Session.getLastLoginPhone()
+                            val cachedPwd = Session.getCachedPassword()
+                            if (!cachedPwd.isNullOrEmpty() && pwd == cachedPwd &&
+                                (acc == cachedUser || (acc == cachedPhone && !cachedPhone.isNullOrEmpty()))
+                            ) {
+                                val u = cachedUser ?: acc
+                                val p = cachedPhone ?: ""
+                                Session.saveLogin(u, p, pwd)
+                                onLoggedIn(u, p)
+                                return@launch
+                            }
                             loading = true
                             try {
-                                val res = ApiClient.login(account.trim(), password.trim())
+                                val res = ApiClient.login(acc, pwd)
                                 if (res.optBoolean("success")) {
                                     val u = res.optString("username")
                                     val p = res.optString("phone")
-                                    Session.saveLogin(u, p)
+                                    Session.saveLogin(u, p, pwd)
                                     onLoggedIn(u, p)
                                 } else {
                                     snackbar.showSnackbar(res.optString("message", "登录失败"))

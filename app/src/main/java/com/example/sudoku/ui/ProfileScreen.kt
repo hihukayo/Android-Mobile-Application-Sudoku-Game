@@ -1,4 +1,4 @@
-package com.example.sudoku.ui
+﻿package com.example.sudoku.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -49,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sudoku.data.ApiClient
@@ -361,28 +363,27 @@ if (label.isNotEmpty()) Text(label, fontSize = (11 / fontScale).sp, lineHeight =
                 Row(Modifier.horizontalScroll(scrollState)) {
                     Column {
                         Row {
-                            var w = 0
-                            while (w < weeks) {
-                                val colStart = (start.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, w * 7) }
-                                val m = colStart.get(Calendar.MONTH)
-                                var end = w
-                                while (end + 1 < weeks) {
-                                    val next = (start.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, (end + 1) * 7) }
-                                    if (next.get(Calendar.MONTH) != m) break
-                                    end++
-                                }
-                                val span = end - w + 1
-                                Box(
-                                    Modifier
-.width(maxOf(span * pitch - 3, 36).dp)
-                                        .height(16.dp),
-                                    contentAlignment = Alignment.CenterStart,
-                                ) {
-Text("${m + 1}月", fontSize = (11 / fontScale).sp, lineHeight = (11 / fontScale).sp, color = sc.textFaint, maxLines = 1)
-                                }
-                                w = end + 1
-                            }
-                        }
+                            val labelMap = mutableMapOf<Int, Int>()
+val monthCursor = (start.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, 1) }
+while (!monthCursor.after(todayCal)) {
+    val col = ((monthCursor.timeInMillis - start.timeInMillis) / (7L * 24 * 3600 * 1000)).toInt()
+    if (col in 0 until weeks) labelMap[col] = monthCursor.get(Calendar.MONTH) + 1
+    monthCursor.add(Calendar.MONTH, 1)
+}
+    Box(Modifier.width((weeks * 17 + 9).dp).height(16.dp)) {
+        for ((col, m) in labelMap) {
+            Text(
+                "${m}\u6708",
+                fontSize = (11 / fontScale).sp,
+                lineHeight = (11 / fontScale).sp,
+                color = sc.textFaint,
+                maxLines = 1,
+                modifier = Modifier.offset(x = (col * 17).dp),
+            )
+        }
+    }
+}
+                        
                         Spacer(Modifier.height(4.dp))
                         Row {
                             for (w in 0 until weeks) {
@@ -402,7 +403,9 @@ Text("${m + 1}月", fontSize = (11 / fontScale).sp, lineHeight = (11 / fontScale
                                 }
                                 if (w < weeks - 1) Spacer(Modifier.width(3.dp))
                             }
-                        }
+                        
+                                Spacer(Modifier.width(12.dp))}
+                        
                     }
                 }
             }

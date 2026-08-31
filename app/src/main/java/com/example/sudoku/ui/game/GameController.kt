@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.example.sudoku.data.ApiClient
+import com.example.sudoku.data.LocalSaveStore
+import com.example.sudoku.data.buildSaveJson
 import com.example.sudoku.model.Cage
 import com.example.sudoku.model.SudokuGenerator
 import com.example.sudoku.model.SudokuPuzzle
@@ -19,6 +21,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private class UndoEntry(
     val r: Int,
@@ -531,6 +536,37 @@ class GameController(val username: String) {
         saving = true
         if (!silent) showStatus("正在保存...")
         saveScope.launch {
+            val payload = buildSaveJson(
+                username = username,
+                boardSize = boardSize,
+                cells = puzzle.cells,
+                notes = puzzle.notes,
+                solution = puzzle.solution,
+                given = puzzle.given,
+                seconds = seconds,
+                errors = errors,
+                isKiller = isKiller,
+                killerDifficulty = killerDifficulty,
+                seed = currentSeed,
+                cages = puzzle.cages,
+            )
+            try {
+                // 1) 本地 SQLite 立即写入：离线也能保存
+                payload.put("savedAt", nowText())
+                withContext(Dispatchers.IO) {
+                    LocalSaveStore.save(username, payload, synced = false)
+                }
+                if (!silent) showStatus(successMsg)
+            } catch (_: Exception) {
+                if (!silent) showStatus(failMsg)
+            } finally {
+                saving = false
+                if (saveAgain) {
+                    saveAgain = false
+                    saveGame(saveAgainSilent, saveAgainSuccess, saveAgainFail)
+                }
+            }
+            // 2) 云端同步（后台尽力而为）：失败不影响本地存档，也不阻塞 saving
             try {
                 ApiClient.saveGame(
                     username = username,
@@ -546,18 +582,15 @@ class GameController(val username: String) {
                     seed = currentSeed,
                     cages = puzzle.cages,
                 )
-                if (!silent) showStatus(successMsg)
+                withContext(Dispatchers.IO) { LocalSaveStore.markSynced(username) }
             } catch (_: Exception) {
-                if (!silent) showStatus(failMsg)
-            } finally {
-                saving = false
-                if (saveAgain) {
-                    saveAgain = false
-                    saveGame(saveAgainSilent, saveAgainSuccess, saveAgainFail)
-                }
             }
         }
     }
+
+    /** 当前本地时间，格式与后端 savedAt 一致 */
+    private fun nowText(): String =
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
 
     /** 等待在途的自动存档完成，避免读档拿到旧数据 */
     suspend fun awaitPendingSave() {
@@ -570,9 +603,51 @@ class GameController(val username: String) {
     }
 
     suspend fun fetchSave(): JSONObject? = try {
-        ApiClient.loadGame(username)
+        withContext(Dispatchers.IO) {
+            val local = LocalSaveStore.load(username)
+            val cloud = try { ApiClient.loadGame(username) } catch (_: Exception) { null }
+            val cloudOk = cloud != null && cloud.optBoolean("success")
+            when {
+                // 本地、云端都没有：没有存档
+                local == null && !cloudOk -> null
+                // 只有云端：采用云端，并落到本地一份
+                local == null -> cloud
+                // 只有本地（离线）：采用本地
+                !cloudOk -> localResult(local)
+                else -> {
+                    // 云端 vs 本地：保存时间较新的赢
+                    if (parseSavedAt(cloud.optString("savedAt")) > parseSavedAt(local.savedAt)) {
+                        // 云端更新：覆盖本地
+                        LocalSaveStore.save(username, cloud, synced = true)
+                        cloud
+                    } else {
+                        // 本地更新或持平：用本地覆盖云端（尽力而为）
+                        try {
+                            ApiClient.uploadRawSave(local.json)
+                            LocalSaveStore.markSynced(username)
+                        } catch (_: Exception) {
+                        }
+                        localResult(local)
+                    }
+                }
+            }
+        }
     } catch (_: Exception) {
         null
+    }
+
+    /** 把本地存档转成与云端一致的返回格式（补 success 标记） */
+    private fun localResult(local: LocalSaveStore.LocalSave): JSONObject {
+        val res = local.json
+        res.put("success", true)
+        return res
+    }
+
+    /** 解析“yyyy-MM-dd HH:mm:ss”为毫秒时间戳，解析失败按 0 处理 */
+    private fun parseSavedAt(t: String): Long = try {
+        SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).parse(t)?.time ?: 0L
+    } catch (_: Exception) {
+        0L
     }
 
     fun restoreFromData(res: JSONObject) {

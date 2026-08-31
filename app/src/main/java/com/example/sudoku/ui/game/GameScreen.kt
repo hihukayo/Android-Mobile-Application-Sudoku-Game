@@ -354,7 +354,7 @@ fun GameScreen(controller: GameController) {
                         if (res != null && res.optBoolean("success")) {
                             pendingLoad = res
                         } else {
-                            controller.showStatus("加载失败，请检查网络连接后重试")
+                            controller.showStatus("没有可加载的存档")
                         }
                     }
                 }
