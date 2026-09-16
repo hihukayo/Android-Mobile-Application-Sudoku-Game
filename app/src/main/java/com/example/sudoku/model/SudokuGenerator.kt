@@ -26,32 +26,82 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
 
     /** 难度对应的笼子大小概率 [2格, 3格, 4格, 5格] */
     private fun cageProbs(difficulty: String): List<Int> = when (difficulty) {
-        "入门" -> listOf(60, 35, 5, 0)
+        "简单" -> listOf(60, 35, 5, 0)
         "困难" -> listOf(30, 30, 40, 0)
         else -> listOf(40, 35, 25, 0)
+    }
+
+    /** 各难度的提示数（预先给定的格数）范围：简单最多、中等居中、困难不给提示 */
+    private fun hintRange(difficulty: String): IntRange = when (difficulty) {
+        "简单" -> 12..18
+        "中等" -> 6..11
+        else -> 0..0
+    }
+
+    /** 按难度补充提示数：数量随机，并轮流分散到各个宫内，避免扎堆（同种子同提示） */
+    private fun applyHints(puzzle: SudokuPuzzle, difficulty: String) {
+        val range = hintRange(difficulty)
+        if (range.last <= 0) return
+        val total = gridSize * gridSize
+        val count = (range.first + rng.nextInt(range.last - range.first + 1)).coerceAtMost(total)
+        // 每个宫内的格子各自随机打乱
+        val boxCells = mutableListOf<MutableList<Int>>()
+        for (br in 0 until gridSize step boardSize) {
+            for (bc in 0 until gridSize step boardSize) {
+                val cells = mutableListOf<Int>()
+                for (r in br until br + boardSize) {
+                    for (c in bc until bc + boardSize) {
+                        cells.add(r * gridSize + c)
+                    }
+                }
+                cells.shuffle(rng)
+                boxCells.add(cells)
+            }
+        }
+        // 宫的访问顺序也随机，再轮流从各宫取格，使提示分散而不集中在一处
+        val boxOrder = boxCells.indices.toMutableList().apply { shuffle(rng) }
+        var placed = 0
+        var round = 0
+        while (placed < count && round < boardSize * boardSize) {
+            for (bi in boxOrder) {
+                if (placed >= count) break
+                if (round >= boxCells[bi].size) continue
+                val idx = boxCells[bi][round]
+                val r = idx / gridSize
+                val c = idx % gridSize
+                puzzle.cells[r][c] = puzzle.solution[r][c]
+                puzzle.given[r][c] = true
+                placed++
+            }
+            round++
+        }
     }
 
     /** 生成算数数独 */
     fun generateKiller(difficulty: String = "中等"): SudokuPuzzle {
         require(boardSize == 3) { "算数数独仅支持 3×3" }
+        // 兼容旧标签：入门已更名为简单
+        val diff = if (difficulty == "入门") "简单" else difficulty
         val maxAttempts = 50
         repeat(maxAttempts) {
             val puzzle = SudokuPuzzle(boardSize)
             fillGrid(puzzle.solution)
-            if (generateCages(puzzle, difficulty)) {
-                puzzle.killerDifficulty = difficulty
-                // 清空所有格子（杀手数独不给任何数字）
+            if (generateCages(puzzle, diff)) {
+                puzzle.killerDifficulty = diff
+                // 先清空所有格子
                 for (r in 0 until gridSize) {
                     for (c in 0 until gridSize) {
                         puzzle.cells[r][c] = 0
                         puzzle.given[r][c] = false
                     }
                 }
+                // 简单/中等补充提示数，困难保持无提示
+                applyHints(puzzle, diff)
                 return puzzle
             }
         }
         // 保底：返回一个简单难度生成的谜题
-        return generateKiller("入门")
+        return generateKiller("简单")
     }
 
     /** 快速生成笼子划分（迭代 + 异形支持，超时则重试） */
@@ -135,8 +185,8 @@ class SudokuGenerator(val boardSize: Int = 3, seed: Int? = null) {
         val remaining = assigned.count { it == -1 }
         if (remaining < 2) return remaining
 
-        // 入门难度限制 4 格笼子不超过 3 个
-        val max4 = if (difficulty == "入门") (if (count4 >= 3) 0 else 3) else 99
+        // 简单难度限制 4 格笼子不超过 3 个
+        val max4 = if (difficulty == "简单") (if (count4 >= 3) 0 else 3) else 99
 
         // 按概率选取大小
         for (attempt in 0 until 20) {

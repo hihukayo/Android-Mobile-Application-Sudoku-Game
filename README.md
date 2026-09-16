@@ -2,7 +2,7 @@
 
 > Android 原生版数独游戏，使用 **Kotlin + Jetpack Compose** 开发，是 Flutter 版数独应用（`Desktop/application/sudoku`）的完整原生重写，界面与逻辑保持一致。
 
-- GitHub 仓库：https://github.com/hihukayo/Flutter-Mobile-Application-Sudoku-game.git
+- GitHub 仓库：https://github.com/hihukayo/Android-Mobile-Application-Sudoku-Game.git
 
 ## 功能特性
 
@@ -13,8 +13,10 @@
 - **多级难度**
   - 经典 3×3：极简 / 简单 / 中等 / 困难（挖空后唯一解校验）
   - 4×4：简单 / 中等 / 困难
-  - 算数数独：入门 / 中等 / 困难
+  - 算数数独：简单 / 中等 / 困难（简单 12~18 个提示数、中等 6~11 个、困难无提示）
 - **游戏辅助**：笔记模式、撤销 / 重做、错误计数、计时（24 小时制 HH:MM:SS）、暂停自动存档、仅首次进入提示续玩（切回不再打扰）
+- **算数数独提示数**：简单 / 中等会按难度预先给出提示数（简单最多、中等次之、困难不给），提示格来自答案、加粗且不可编辑；数量与位置由种子推导，同难度 + 同种子可稳定复现，且分散到各宫不扎堆
+- **算数数独棋盘**：宫界线比普通格线略深一档，便于辨认宫，同时与笼子线（2dp）保持区分
 - **游戏种子**：每局随机生成字母数字种子（0-9 + A-Z），骰子图标位于笔记左侧、大小与笔记一致；种子弹窗可一键复制 / 输入还原同一局，并自动切换到对应的模式 / 难度；生成按钮常亮、种子码居中显示
 - **账户系统**：注册 / 登录 / 注销，个人资料（相册选头像、服务器同步，换设备可恢复），修改用户名 / 手机号 / 密码，注销账号
 - **云端存档**：手动保存 / 加载，暂停自动保存，未游玩的新盘不会覆盖旧存档；读档后即视为已玩过，暂停 / 退出自动保存
@@ -55,19 +57,27 @@ app/src/main/java/com/example/sudoku/
 需要 Android SDK，路径见 `local.properties`（本机已配置）。
 
 ```bash
-# Windows
-gradlew.bat assembleDebug
-# macOS / Linux
-./gradlew assembleDebug
+# Debug（日常调试）
+gradlew.bat assembleDebug        # macOS / Linux：./gradlew assembleDebug
+
+# Release（签名包，需 keystore/sudoku-release.jks 与 keystore/keystore-password.txt）
+gradlew.bat assembleRelease      # macOS / Linux：./gradlew assembleRelease
 ```
 
-Debug APK 输出：`app/build/outputs/apk/debug/app-debug.apk`
+- Debug APK：`app/build/outputs/apk/debug/app-debug.apk`
+- Release APK：`app/build/outputs/apk/release/app-release.apk`
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/app-release.apk
 ```
 
 > 依赖已缓存在本机 Gradle 缓存，断网时可加 `--offline` 构建。
+
+## 发布版本
+
+- **v1.2.0**（versionCode 4）：算数数独「入门」更名为「简单」；简单 / 中等新增提示数（简单 12~18、中等 6~11），困难保持无提示；提示数与笼子同色系且分布分散；宫线略微增强便于分辨宫
+- 发布包：`release/sudoku-v1.2.0.apk`（已用 `keystore/sudoku-release.jks` V2 签名，可直接安装 / 覆盖升级）
+- 历史版本 v1.1.1 已下线
 
 ## 连接后端
 

@@ -189,7 +189,7 @@ class GameController(val username: String) {
     }
 
     private fun difficultyLabel(code: Int): String = when (code) {
-        0 -> "入门"
+        0 -> "简单"
         1 -> "极简"
         2 -> "简单"
         3 -> "中等"
@@ -246,7 +246,7 @@ class GameController(val username: String) {
             } else {
                 diffCode = if (isKiller) {
                     val diffRoll = rng.nextInt(100)
-                    val d = if (diffRoll < 25) "入门" else if (diffRoll < 75) "中等" else "困难"
+                    val d = if (diffRoll < 25) "简单" else if (diffRoll < 75) "中等" else "困难"
                     killerDifficulty = d
                     difficultyCode(d)
                 } else {
@@ -661,7 +661,9 @@ class GameController(val username: String) {
         val givenRaw = res.optJSONArray("given") ?: JSONArray()
         val seconds = res.optInt("seconds", 0)
         val errors = res.optInt("errors", 0)
-        val killerDifficulty = res.optString("killerDifficulty", "中等")
+        var killerDifficulty = res.optString("killerDifficulty", "中等")
+        // 兼容旧存档：入门难度已更名为简单
+        if (killerDifficulty == "入门") killerDifficulty = "简单"
         if (res.has("seed")) currentSeed = res.optInt("seed", 0)
         val cagesRaw = res.optJSONArray("cages")
 
@@ -734,7 +736,7 @@ class GameController(val username: String) {
         }
         if (isKiller) {
             return when (killerDifficulty) {
-                "入门" -> 2400
+                "简单", "入门" -> 2400
                 "中等" -> 4800
                 "困难" -> 9600
                 else -> 4800

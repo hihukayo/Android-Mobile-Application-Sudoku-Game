@@ -474,7 +474,6 @@ private fun diffColor(controller: GameController): Color {
     return when (diff) {
         "极简" -> Color(0xFFEF5350)
         "困难" -> Color(0xFFFFA726)
-        "入门" -> sc.userInput
         "中等" -> Blue
         "简单" -> sc.userInput
         else -> sc.textSecondary

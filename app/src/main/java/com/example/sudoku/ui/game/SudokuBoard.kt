@@ -91,6 +91,8 @@ fun SudokuBoard(
                 }
             }
             // 数字与笔记
+            // 算数数独的提示数与笼子标签/棋盘线条同色系，比主文字更柔和
+            val hintColor = if (puzzle.isKiller) vividCageColor(sc.textSecondary) else sc.textPrimary
             for (r in 0 until gs) {
                 for (c in 0 until gs) {
                     val v = puzzle.cells[r][c]
@@ -98,8 +100,8 @@ fun SudokuBoard(
                         val given = puzzle.given[r][c]
                         val isError = errorCells.contains("$r,$c")
                         val color = when {
-                            given -> sc.textPrimary
                             isError -> Red
+                            given -> hintColor
                             else -> sc.userInput
                         }
                         val weight = if (given) FontWeight.Bold else FontWeight.SemiBold
@@ -129,15 +131,18 @@ fun SudokuBoard(
                     }
                 }
             }
-            // 网格线（仅内部线条，外圈由下方统一圆角边框承担；杀手模式内部统一浅灰细线）
+            // 网格线（仅内部线条，外圈由下方统一圆角边框承担；算数数独细格线为浅灰，宫线略深一档）
             val thin = 0.5.dp.toPx()
             val thick = 2.dp.toPx()
+            // 算数数独：宫线仅比格子线略深一点点，保持淡雅，不与笼子线（2dp）争色
+            val boxStroke = if (puzzle.isKiller) 0.8.dp.toPx() else thick
+            val boxColor = if (puzzle.isKiller) lerp(sc.boardLine, sc.textSecondary, 0.3f) else sc.textSecondary
             for (i in 1 until gs) {
                 val x = i * cell
                 val y = i * cell
-                val isThick = !puzzle.isKiller && i % bs == 0
-                val stroke = if (isThick) thick else thin
-                val color = if (isThick) sc.textSecondary else sc.boardLine
+                val isBox = i % bs == 0
+                val stroke = if (isBox) boxStroke else thin
+                val color = if (isBox) boxColor else sc.boardLine
                 drawLine(color, Offset(x, 0f), Offset(x, size.height), strokeWidth = stroke)
                 drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = stroke)
             }
@@ -146,7 +151,8 @@ fun SudokuBoard(
             val selC = selectedCol
             if (sr != null && selC != null) {
                 val hlLine = lerp(sc.boardLine, sc.textSecondary, 0.2f)
-                fun isThick(i: Int) = !puzzle.isKiller && i % bs == 0
+                // 宫线（含算数数独的宫线）不参与高亮重绘，保持自身颜色
+                fun isBoxLine(i: Int) = i % bs == 0
                 for (r in 0 until gs) {
                     for (c in 0 until gs) {
                         val hl = r == sr || c == selC ||
@@ -154,16 +160,16 @@ fun SudokuBoard(
                         if (!hl) continue
                         val x = c * cell
                         val y = r * cell
-                        if (c > 0 && !isThick(c)) {
+                        if (c > 0 && !isBoxLine(c)) {
                             drawLine(hlLine, Offset(x, y), Offset(x, y + cell), thin)
                         }
-                        if (c < gs - 1 && !isThick(c + 1)) {
+                        if (c < gs - 1 && !isBoxLine(c + 1)) {
                             drawLine(hlLine, Offset(x + cell, y), Offset(x + cell, y + cell), thin)
                         }
-                        if (r > 0 && !isThick(r)) {
+                        if (r > 0 && !isBoxLine(r)) {
                             drawLine(hlLine, Offset(x, y), Offset(x + cell, y), thin)
                         }
-                        if (r < gs - 1 && !isThick(r + 1)) {
+                        if (r < gs - 1 && !isBoxLine(r + 1)) {
                             drawLine(hlLine, Offset(x, y + cell), Offset(x + cell, y + cell), thin)
                         }
                     }
